@@ -7,6 +7,11 @@ import { LayoutDashboard, Smartphone, Calendar, HardDrive, Users, Settings, Exte
 export default function Sidebar() {
   const pathname = usePathname();
 
+  // Hide sidebar completely on mobile booth screen for full-screen immersive UI
+  if (pathname.startsWith('/booth')) {
+    return null;
+  }
+
   const navItems = [
     { name: 'Dashboard', href: '/', icon: LayoutDashboard },
     { name: 'Fleet Devices', href: '/devices', icon: Smartphone },

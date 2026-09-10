@@ -140,6 +140,37 @@ export default function CommandCenterDashboard() {
         </div>
       </div>
 
+      {/* Mobile Booth Quick Connect Banner */}
+      <div className="p-6 rounded-2xl bg-gradient-to-r from-luster-panel via-luster-surface to-luster-panel border border-luster-accent/30 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        <div className="flex items-center space-x-4">
+          <div className="w-12 h-12 rounded-2xl bg-luster-accent/10 border border-luster-accent/40 flex items-center justify-center text-luster-accent">
+            <Smartphone className="w-6 h-6" />
+          </div>
+          <div>
+            <div className="flex items-center space-x-2">
+              <h2 className="text-base font-black text-luster-text">TEST ON YOUR MOBILE PHONE (NO APK REQUIRED)</h2>
+              <span className="px-2 py-0.5 rounded-full bg-luster-success/10 border border-luster-success/30 text-[10px] text-luster-success font-bold">
+                LOCAL WI-FI READY
+              </span>
+            </div>
+            <p className="text-xs text-luster-textMuted mt-1">
+              Open Safari or Chrome on your phone and browse to: <code className="px-2 py-0.5 rounded bg-luster-bg border border-luster-border text-luster-accent font-mono font-bold">http://192.168.1.5:3001/booth</code>
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center space-x-3 w-full md:w-auto">
+          <Link
+            href="/booth"
+            target="_blank"
+            className="flex-1 md:flex-initial px-4 py-2.5 rounded-xl bg-luster-accent text-luster-bg text-xs font-black uppercase tracking-wider hover:opacity-90 transition flex items-center justify-center space-x-2 shadow-lg shadow-luster-accent/20"
+          >
+            <span>Launch Mobile Booth Simulator</span>
+            <ArrowUpRight className="w-4 h-4" />
+          </Link>
+        </div>
+      </div>
+
       {/* 3. Active Event Spotlight */}
       {activeEvent ? (
         <div className="p-6 rounded-2xl bg-luster-panel border border-luster-accent/40 shadow-xl relative overflow-hidden">
