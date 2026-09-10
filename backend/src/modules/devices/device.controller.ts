@@ -31,7 +31,16 @@ export class DeviceController {
 
   async disconnect(req: Request, res: Response, next: NextFunction) {
     try {
-      const { deviceId } = req.body;
+      let deviceId = req.body?.deviceId;
+      if (!deviceId && typeof req.body === 'string') {
+        try {
+          const parsed = JSON.parse(req.body);
+          deviceId = parsed.deviceId;
+        } catch {}
+      }
+      if (!deviceId || deviceId === 'undefined') {
+        return res.json({ success: true, message: 'Ignored missing deviceId' });
+      }
       const result = await deviceService.disconnectDevice(deviceId);
       res.json({ success: true, data: result });
     } catch (err) {

@@ -60,7 +60,7 @@ export default function MobileBoothPage() {
     if (typeof window !== 'undefined') {
       let id = localStorage.getItem('luster_booth_device_id');
       if (!id) {
-        id = `booth-mobile-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+        id = 'LUSTER-BOOTH-MOBILE-01';
         localStorage.setItem('luster_booth_device_id', id);
       }
       setDeviceId(id);
@@ -144,14 +144,15 @@ export default function MobileBoothPage() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            deviceId,
-            deviceName: `${model} (${operator?.fullName || 'Booth Operator'})`,
+            deviceId: deviceId || 'LUSTER-BOOTH-MOBILE-01',
+            deviceName: `${model} (${operator?.fullName || 'Operator'})`,
             model,
-            appVersion: 'v1.4.0 (Mobile Web)',
+            appVersion: 'v1.4.0 (Mobile)',
             batteryLevel,
             storageFreeGb: 32,
             networkType: 'WIFI',
-            status: boothState === 'RECORDING' ? 'BUSY' : 'ONLINE',
+            operationalState: boothState === 'RECORDING' ? 'RECORDING' : 'READY',
+            status: 'ONLINE',
           }),
         });
 
@@ -170,8 +171,19 @@ export default function MobileBoothPage() {
     // Disconnect beacon on leave
     const sendDisconnect = () => {
       const apiBase = getApiBase();
-      const payload = JSON.stringify({ deviceId, reason: 'APP_BACKGROUND' });
-      navigator.sendBeacon(`${apiBase}/api/v1/devices/disconnect`, payload);
+      const currentDevId = deviceId || localStorage.getItem('luster_booth_device_id') || 'LUSTER-BOOTH-MOBILE-01';
+      const payload = JSON.stringify({ deviceId: currentDevId, reason: 'APP_BACKGROUND' });
+      if (typeof navigator !== 'undefined' && navigator.sendBeacon) {
+        const blob = new Blob([payload], { type: 'application/json' });
+        navigator.sendBeacon(`${apiBase}/api/v1/devices/disconnect`, blob);
+      } else {
+        fetch(`${apiBase}/api/v1/devices/disconnect`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: payload,
+          keepalive: true,
+        }).catch(() => {});
+      }
     };
 
     window.addEventListener('beforeunload', sendDisconnect);

@@ -52,26 +52,38 @@ export class DeviceService {
     };
   }
 
-  public async recordHeartbeat(dto: HeartbeatDTO) {
+  public async recordHeartbeat(dto: any) {
+    if (!dto || !dto.deviceId || dto.deviceId === 'undefined') {
+      return { acknowledged: false, message: 'Invalid deviceId' };
+    }
     const timestamp = new Date().toISOString();
+    const deviceId = dto.deviceId;
+    const deviceName = dto.deviceName || 'Luster Mobile Unit';
+    const platform = dto.model || dto.platform || 'Mobile';
+    const appVersion = dto.appVersion || 'v1.4.0';
+    const operationalState = dto.operationalState || dto.status || 'READY';
 
     // 1. Record raw heartbeat log
     await db.recordHeartbeat({
-      device_id: dto.deviceId,
+      device_id: deviceId,
       current_event_id: dto.currentEventId || null,
-      operational_state: dto.operationalState,
+      operational_state: operationalState,
       battery_level: dto.batteryLevel || null,
       is_charging: dto.isCharging || false,
       storage_free_bytes: dto.storageFreeBytes || null,
       network_type: dto.networkType || 'WIFI',
-      app_version: dto.appVersion,
+      app_version: appVersion,
       timestamp,
     });
 
-    // 2. Update device status
+    // 2. Update device status with full metadata
     await db.upsertDevice({
-      id: dto.deviceId,
-      current_state: dto.operationalState,
+      id: deviceId,
+      device_identifier: deviceId,
+      device_name: deviceName,
+      platform,
+      app_version: appVersion,
+      current_state: operationalState,
       battery_level: dto.batteryLevel,
       is_charging: dto.isCharging,
       storage_free_bytes: dto.storageFreeBytes,
@@ -85,32 +97,44 @@ export class DeviceService {
   }
 
   public async getFleetStatus() {
+    await db.cleanPhantomDevices();
     const devices = await db.listDevices();
     const now = Date.now();
 
-    return devices.map((device: any) => {
-      let isOnline = false;
-      let secondsSinceHeartbeat = null;
+    return devices
+      .filter((device: any) => {
+        const id = device.device_identifier || device.id || '';
+        return id && !id.startsWith('dev-');
+      })
+      .map((device: any) => {
+        let isOnline = false;
+        let secondsSinceHeartbeat = null;
 
-      if (device.last_heartbeat) {
-        const lastHb = new Date(device.last_heartbeat).getTime();
-        secondsSinceHeartbeat = Math.floor((now - lastHb) / 1000);
-        isOnline = secondsSinceHeartbeat <= this.OFFLINE_THRESHOLD_SECONDS;
-      }
+        if (device.last_heartbeat) {
+          const lastHb = new Date(device.last_heartbeat).getTime();
+          secondsSinceHeartbeat = Math.floor((now - lastHb) / 1000);
+          isOnline = secondsSinceHeartbeat <= this.OFFLINE_THRESHOLD_SECONDS;
+        }
 
-      return {
-        ...device,
-        calculatedStatus: isOnline ? 'ONLINE' : 'OFFLINE',
-        secondsSinceHeartbeat,
-        currentState: isOnline ? device.current_state : 'OFFLINE',
-      };
-    });
+        return {
+          ...device,
+          device_identifier: device.device_identifier || device.id,
+          device_name: device.device_name || 'Luster Mobile Unit',
+          calculatedStatus: isOnline ? 'ONLINE' : 'OFFLINE',
+          secondsSinceHeartbeat,
+          currentState: isOnline ? (device.current_state || 'ONLINE') : 'OFFLINE',
+        };
+      });
   }
 
   public async disconnectDevice(deviceId: string) {
+    if (!deviceId || deviceId === 'undefined') {
+      return { acknowledged: false, message: 'Invalid deviceId' };
+    }
     const timestamp = new Date().toISOString();
     await db.upsertDevice({
       id: deviceId,
+      device_identifier: deviceId,
       current_state: 'OFFLINE',
       status: 'OFFLINE',
       last_heartbeat: timestamp,

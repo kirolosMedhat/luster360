@@ -232,26 +232,37 @@ export class DatabaseService {
   }
 
   async upsertDevice(deviceData: any) {
+    const devId = deviceData.device_identifier || deviceData.id;
+    if (!devId || devId === 'undefined' || devId.startsWith('dev-')) {
+      return null;
+    }
+
+    const cleanRecord = {
+      ...deviceData,
+      id: devId,
+      device_identifier: devId,
+      updated_at: new Date().toISOString(),
+    };
+
     if (this.isSupabaseLive) {
       try {
         const { data, error } = await this.supabase
           .from('devices')
-          .upsert(deviceData, { onConflict: 'device_identifier' })
+          .upsert(cleanRecord, { onConflict: 'device_identifier' })
           .select()
           .single();
 
         if (!error && data) {
-          memoryDb.devices.set(data.id, data);
+          memoryDb.devices.set(devId, data);
           return data;
         }
       } catch {
         // Fallback
       }
     }
-    const id = deviceData.id || `dev-${Date.now()}`;
-    const existing = memoryDb.devices.get(id) || {};
-    const record = { ...existing, ...deviceData, id, updated_at: new Date().toISOString() };
-    memoryDb.devices.set(id, record);
+    const existing = memoryDb.devices.get(devId) || {};
+    const record = { ...existing, ...cleanRecord };
+    memoryDb.devices.set(devId, record);
     return record;
   }
 
@@ -281,6 +292,19 @@ export class DatabaseService {
       }
     }
     return Array.from(memoryDb.devices.values());
+  }
+
+  async cleanPhantomDevices() {
+    for (const [key] of memoryDb.devices.entries()) {
+      if (key.startsWith('dev-') || key === 'undefined') {
+        memoryDb.devices.delete(key);
+      }
+    }
+    if (this.isSupabaseLive) {
+      try {
+        await this.supabase.from('devices').delete().like('device_identifier', 'dev-%');
+      } catch {}
+    }
   }
 }
 
