@@ -30,6 +30,7 @@ export default function UsersPage() {
   const fetchUsers = async () => {
     try {
       setLoading(true);
+      setError(null);
       const res = await fetch(`${apiUrl}/api/v1/auth/users`);
       const data = await res.json();
       if (data.success) {
