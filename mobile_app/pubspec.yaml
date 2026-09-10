@@ -1,0 +1,50 @@
+name: luster_360
+description: "Professional production-grade 360 photobooth mobile application and cloud synchronization client for Luster Photobooth."
+publish_to: "none"
+version: 1.0.0+1
+
+environment:
+  sdk: ">=3.3.0 <4.0.0"
+  flutter: ">=3.24.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # State Management & Routing
+  flutter_riverpod: ^2.6.1
+  go_router: ^14.8.1
+
+  # Camera & Media
+  camera: ^0.11.1
+  video_player: ^2.9.2
+  path_provider: ^2.1.5
+
+  # Sharing & QR
+  qr_flutter: ^4.1.0
+
+  # Networking & Realtime
+  http: ^1.3.0
+  connectivity_plus: ^6.1.3
+
+  # Device Hardware & State
+  battery_plus: ^6.2.1
+  wakelock_plus: ^1.2.11
+  shared_preferences: ^2.5.2
+
+  # Utilities & Design
+  intl: ^0.20.2
+  uuid: ^4.5.1
+  flutter_animate: ^4.5.2
+  google_fonts: ^6.2.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/images/
