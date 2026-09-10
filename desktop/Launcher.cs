@@ -43,33 +43,53 @@ namespace Luster360 {
 
             // 1. Ensure Backend is running on port 4000
             if (!IsPortOpen("127.0.0.1", 4000) && Directory.Exists(backendDir)) {
-                StartBackgroundService(backendDir, "cmd.exe", "/c npm run dev");
+                string backendCmd = File.Exists(Path.Combine(backendDir, "dist", "server.js"))
+                    ? "/c npm start"
+                    : "/c npm run dev";
+                StartBackgroundService(backendDir, "cmd.exe", backendCmd);
             }
 
-            // 2. Ensure Command Center is running on port 3001
+            // 2. Ensure Command Center is running in production mode on port 3001
             if (!IsPortOpen("127.0.0.1", 3001) && Directory.Exists(commandCenterDir)) {
-                StartBackgroundService(commandCenterDir, "cmd.exe", "/c npm run dev");
+                string webCmd = Directory.Exists(Path.Combine(commandCenterDir, ".next"))
+                    ? "/c npm start"
+                    : "/c npm run dev";
+                StartBackgroundService(commandCenterDir, "cmd.exe", webCmd);
             }
 
-            // Wait up to 15 seconds for Command Center to accept connections
+            // Wait up to 25 seconds for Command Center to accept connections
             int attempts = 0;
-            while (!IsPortOpen("127.0.0.1", 3001) && attempts < 30) {
+            while (!IsPortOpen("127.0.0.1", 3001) && attempts < 50) {
                 Thread.Sleep(500);
                 attempts++;
             }
 
-            // 3. Launch dedicated standalone desktop window
-            string edgePath = @"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe";
-            if (!File.Exists(edgePath)) {
-                edgePath = @"C:\Program Files\Microsoft\Edge\Application\msedge.exe";
+            // 3. Locate browser executable (Edge or Chrome)
+            string browserPath = @"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe";
+            if (!File.Exists(browserPath)) {
+                browserPath = @"C:\Program Files\Microsoft\Edge\Application\msedge.exe";
+            }
+            if (!File.Exists(browserPath)) {
+                browserPath = @"C:\Program Files\Google\Chrome\Application\chrome.exe";
+            }
+            if (!File.Exists(browserPath)) {
+                browserPath = @"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe";
             }
 
             string userDataDir = Path.Combine(Path.GetTempPath(), "Luster360DashboardProfile");
 
-            if (File.Exists(edgePath)) {
+            // Clean stale browser cache directory so old broken styles never persist
+            try {
+                string cacheDir = Path.Combine(userDataDir, "Default", "Cache");
+                if (Directory.Exists(cacheDir)) {
+                    Directory.Delete(cacheDir, true);
+                }
+            } catch { }
+
+            if (File.Exists(browserPath)) {
                 var appPsi = new ProcessStartInfo {
-                    FileName = edgePath,
-                    Arguments = string.Format("--app=http://localhost:3001 --window-size=1440,900 --user-data-dir=\"{0}\"", userDataDir),
+                    FileName = browserPath,
+                    Arguments = string.Format("--app=http://localhost:3001 --window-size=1440,900 --user-data-dir=\"{0}\" --disable-http-cache --no-first-run", userDataDir),
                     UseShellExecute = false
                 };
                 var appProcess = Process.Start(appPsi);
