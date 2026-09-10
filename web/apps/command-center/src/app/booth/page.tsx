@@ -26,7 +26,7 @@ export default function MobileBoothPage() {
   const [token, setToken] = useState<string | null>(null);
   const [operator, setOperator] = useState<any>(null);
   const [username, setUsername] = useState('kiro_operator');
-  const [password, setPassword] = useState('password123');
+  const [password, setPassword] = useState('LusterPassword2026!');
   const [authLoading, setAuthLoading] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
 
