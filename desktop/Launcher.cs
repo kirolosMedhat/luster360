@@ -89,7 +89,7 @@ namespace Luster360 {
             if (File.Exists(browserPath)) {
                 var appPsi = new ProcessStartInfo {
                     FileName = browserPath,
-                    Arguments = string.Format("--app=http://localhost:3001 --window-size=1440,900 --user-data-dir=\"{0}\" --disable-http-cache --no-first-run", userDataDir),
+                    Arguments = string.Format("--app=http://localhost:3001 --window-size=1440,900 --user-data-dir=\"{0}\" --disable-http-cache --no-first-run --disable-sync", userDataDir),
                     UseShellExecute = false
                 };
                 var appProcess = Process.Start(appPsi);
