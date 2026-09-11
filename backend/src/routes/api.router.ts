@@ -26,6 +26,7 @@ apiRouter.post('/events/:id/start', authenticateDeviceOrAdmin, (req, res, next) 
 apiRouter.post('/events/:id/pause', authenticateDeviceOrAdmin, (req, res, next) => eventController.pauseEvent(req, res, next));
 apiRouter.post('/events/:id/resume', authenticateDeviceOrAdmin, (req, res, next) => eventController.resumeEvent(req, res, next));
 apiRouter.post('/events/:id/end', authenticateDeviceOrAdmin, (req, res, next) => eventController.endEvent(req, res, next));
+apiRouter.put('/events/:id/settings', (req, res, next) => eventController.updateBoothSettings(req, res, next));
 
 // ==========================================
 // UPLOADS & IDEMPOTENCY

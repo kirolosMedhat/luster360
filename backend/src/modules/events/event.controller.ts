@@ -87,6 +87,16 @@ export class EventController {
       next(err);
     }
   }
+
+  async updateBoothSettings(req: Request, res: Response, next: NextFunction) {
+    try {
+      const id = req.params.id as string;
+      const updated = await eventService.updateBoothSettings(id, req.body);
+      res.json({ success: true, data: updated });
+    } catch (err) {
+      next(err);
+    }
+  }
 }
 
 export const eventController = new EventController();

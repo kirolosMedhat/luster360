@@ -215,3 +215,4 @@ flutter test test/
 ## 7. License & Copyright
 
 © 2026 Luster Photobooth Systems. All rights reserved. Commercial proprietary software.
+https://supabase.com/dashboard/project/hfsfmdfwhjyvifiuxjfi

@@ -67,6 +67,10 @@ export default function CommandCenterDashboard() {
   const activeEvents = events.filter(e => e.status === 'ACTIVE');
   const activeEvent = activeEvents[0] || null;
 
+  const totalRecorded = devices.reduce((sum, d) => sum + ((d as any).capturesRecorded || 0), 0);
+  const totalUploaded = devices.reduce((sum, d) => sum + ((d as any).capturesUploaded || 0), 0);
+  const totalPending = devices.reduce((sum, d) => sum + ((d as any).capturesPending || 0), 0);
+
   return (
     <div className="p-8 space-y-8">
       {/* 1. Header */}
@@ -119,13 +123,16 @@ export default function CommandCenterDashboard() {
 
         <div className="p-5 rounded-2xl bg-luster-panel border border-luster-border">
           <div className="flex items-center justify-between mb-3">
-            <span className="text-[11px] font-bold text-luster-textMuted tracking-wider uppercase">VIDEOS TODAY</span>
+            <span className="text-[11px] font-bold text-luster-textMuted tracking-wider uppercase">CAPTURES / UPLOADS</span>
             <CloudUpload className="w-4 h-4 text-luster-accent" />
           </div>
           <div className="text-2xl font-black text-luster-text tracking-tight font-mono">
-            0
+            {totalRecorded} <span className="text-xs font-bold text-slate-500">rec</span> / {totalUploaded} <span className="text-xs font-bold text-emerald-400">up</span>
           </div>
-          <div className="text-xs text-luster-textDark mt-1 font-medium">Total 360 captures</div>
+          <div className="text-xs text-luster-textDark mt-1 font-medium flex items-center justify-between">
+            <span>{totalPending > 0 ? `${totalPending} uploading to Drive...` : 'All synced to Google Drive'}</span>
+            {totalPending > 0 && <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />}
+          </div>
         </div>
 
         <div className="p-5 rounded-2xl bg-luster-panel border border-luster-border">
@@ -205,15 +212,15 @@ export default function CommandCenterDashboard() {
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-6">
             <div className="p-4 rounded-xl bg-luster-surface border border-luster-border">
               <span className="text-[10px] font-bold text-luster-textDark uppercase">TOTAL CAPTURES</span>
-              <div className="text-xl font-black text-luster-text mt-1">0</div>
+              <div className="text-xl font-black text-luster-text mt-1">{totalRecorded}</div>
             </div>
             <div className="p-4 rounded-xl bg-luster-surface border border-luster-border">
               <span className="text-[10px] font-bold text-luster-textDark uppercase">UPLOADED TO DRIVE</span>
-              <div className="text-xl font-black text-luster-success mt-1">0</div>
+              <div className="text-xl font-black text-luster-success mt-1">{totalUploaded}</div>
             </div>
             <div className="p-4 rounded-xl bg-luster-surface border border-luster-border">
               <span className="text-[10px] font-bold text-luster-textDark uppercase">PENDING UPLOAD</span>
-              <div className="text-xl font-black text-luster-warning mt-1">0</div>
+              <div className="text-xl font-black text-luster-warning mt-1">{totalPending}</div>
             </div>
             <div className="p-4 rounded-xl bg-luster-surface border border-luster-border">
               <span className="text-[10px] font-bold text-luster-textDark uppercase">STORAGE PROVIDER</span>

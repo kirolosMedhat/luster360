@@ -62,6 +62,9 @@ export class DeviceService {
     const platform = dto.model || dto.platform || 'Mobile';
     const appVersion = dto.appVersion || 'v1.4.0';
     const operationalState = dto.operationalState || dto.status || 'READY';
+    const capturesRecorded = Number(dto.capturesRecorded || 0);
+    const capturesUploaded = Number(dto.capturesUploaded || 0);
+    const capturesPending = Math.max(0, capturesRecorded - capturesUploaded);
 
     // 1. Record raw heartbeat log
     await db.recordHeartbeat({
@@ -76,7 +79,7 @@ export class DeviceService {
       timestamp,
     });
 
-    // 2. Update device status with full metadata
+    // 2. Update device status with full metadata and capture counters
     await db.upsertDevice({
       id: deviceId,
       device_identifier: deviceId,
@@ -89,11 +92,14 @@ export class DeviceService {
       storage_free_bytes: dto.storageFreeBytes,
       storage_total_bytes: dto.storageTotalBytes,
       current_event_id: dto.currentEventId,
+      captures_recorded: capturesRecorded,
+      captures_uploaded: capturesUploaded,
+      captures_pending: capturesPending,
       last_heartbeat: timestamp,
       status: 'ONLINE',
     });
 
-    return { acknowledged: true, timestamp };
+    return { acknowledged: true, timestamp, capturesRecorded, capturesUploaded, capturesPending };
   }
 
   public async getFleetStatus() {
@@ -123,6 +129,9 @@ export class DeviceService {
           calculatedStatus: isOnline ? 'ONLINE' : 'OFFLINE',
           secondsSinceHeartbeat,
           currentState: isOnline ? (device.current_state || 'ONLINE') : 'OFFLINE',
+          capturesRecorded: device.captures_recorded || 0,
+          capturesUploaded: device.captures_uploaded || 0,
+          capturesPending: device.captures_pending || 0,
         };
       });
   }

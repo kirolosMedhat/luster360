@@ -18,6 +18,7 @@ export interface CreateEventDTO {
   galleryPassword?: string;
   isDownloadEnabled?: boolean;
   isSharingEnabled?: boolean;
+  boothSettings?: any;
 }
 
 export class EventService {
@@ -98,6 +99,7 @@ export class EventService {
       brand_secondary_color: dto.brandSecondaryColor || '#18283F',
       is_download_enabled: dto.isDownloadEnabled !== false,
       is_sharing_enabled: dto.isSharingEnabled !== false,
+      booth_settings: dto.boothSettings || null,
       
       // Google Drive folder IDs
       drive_root_folder_id: driveFolders.rootFolderId,
@@ -109,6 +111,13 @@ export class EventService {
 
     const created = await db.createEvent(eventRecord);
     return created;
+  }
+
+  public async updateBoothSettings(eventId: string, settings: any) {
+    return db.updateEvent(eventId, {
+      booth_settings: settings,
+      updated_at: new Date().toISOString(),
+    });
   }
 
   public async startEvent(eventId: string) {
