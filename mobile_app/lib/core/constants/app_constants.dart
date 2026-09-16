@@ -5,7 +5,7 @@ class AppConstants {
   static const String appVersion = '1.0.0+1';
 
   // Network & Cloud API
-  static const String defaultMediaApiUrl = 'http://localhost:4000/api/v1';
+  static const String defaultMediaApiUrl = 'http://192.168.1.6:4000/api/v1';
   static const String publicGalleryBaseUrl = 'https://events.luster-photobooth.com';
 
   // Storage Directories

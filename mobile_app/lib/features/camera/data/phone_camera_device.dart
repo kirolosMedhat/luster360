@@ -1,5 +1,6 @@
 import 'dart:io';
-import 'package:camera/camera.dart';
+import 'package:camera/camera.dart' hide ResolutionPreset;
+import 'package:camera/camera.dart' as cam show ResolutionPreset;
 import '../domain/capture_device.dart';
 import '../../../core/logging/app_logger.dart';
 import '../../../core/errors/failures.dart';
@@ -38,7 +39,7 @@ class PhoneCameraDevice implements CaptureDevice {
 
       _controller = CameraController(
         camera,
-        ResolutionPreset.high,
+        cam.ResolutionPreset.high,
         enableAudio: true,
         imageFormatGroup: ImageFormatGroup.jpeg,
       );

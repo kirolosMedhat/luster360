@@ -30,7 +30,7 @@ class LusterTheme {
         titleTextStyle: LusterTypography.titleLarge,
         systemOverlayStyle: SystemUiOverlayStyle.light,
       ),
-      cardTheme: CardTheme(
+      cardTheme: CardThemeData(
         color: LusterColors.panel,
         elevation: 0,
         shape: RoundedRectangleBorder(

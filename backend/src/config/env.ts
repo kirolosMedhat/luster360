@@ -65,7 +65,7 @@ export const config: AppConfig = {
     clientId: process.env.GOOGLE_DRIVE_CLIENT_ID,
     clientSecret: process.env.GOOGLE_DRIVE_CLIENT_SECRET,
     refreshToken: process.env.GOOGLE_DRIVE_REFRESH_TOKEN,
-    rootFolderId: process.env.GOOGLE_DRIVE_ROOT_FOLDER_ID,
+    rootFolderId: process.env.GOOGLE_DRIVE_ROOT_FOLDER_ID || process.env.GOOGLE_DRIVE_PARENT_FOLDER_ID,
     serviceAccountEmail: detectedSaEmail,
     serviceAccountPrivateKey: detectedSaKey,
   },

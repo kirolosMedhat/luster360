@@ -5,12 +5,14 @@ class LusterColors {
 
   // Primary Brand Identity
   static const Color primaryBlue = Color(0xFF86CFFF);
+  static const Color primary = primaryBlue;
   static const Color darkNavy = Color(0xFF18283F);
   static const Color pitchBlack = Color(0xFF000000);
   static const Color pureWhite = Color(0xFFFFFFFF);
 
   // Background and Surfaces (Dark Booth Studio Environment)
   static const Color background = Color(0xFF0B0F17);
+  static const Color canvas = background;
   static const Color panel = Color(0xFF101622);
   static const Color surface = Color(0xFF151D2E);
   static const Color header = Color(0xFF18283F);

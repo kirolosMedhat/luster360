@@ -23,7 +23,8 @@ export default function DevicesPage() {
   const [devices, setDevices] = useState<Device[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+  // Relative URL routes through Next.js rewrites to backend port 4000 seamlessly
+  const apiUrl = '';
 
   const fetchDevices = async () => {
     try {
@@ -69,6 +70,46 @@ export default function DevicesPage() {
         </div>
       </div>
 
+      {/* Android Mobile App Installation Banner */}
+      <div className="p-6 rounded-2xl bg-gradient-to-r from-luster-header/80 via-luster-panel to-luster-surface border border-luster-accent/30 flex flex-col md:flex-row items-center justify-between gap-6 shadow-xl shadow-black/40">
+        <div className="flex items-center space-x-5">
+          <div className="w-24 h-24 bg-white p-2 rounded-xl flex items-center justify-center shrink-0 shadow-lg">
+            <img
+              src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=http://192.168.1.6:3001/luster360.apk"
+              alt="Scan to Download APK"
+              className="w-full h-full object-contain"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <div className="flex items-center space-x-2">
+              <span className="px-2 py-0.5 rounded text-[10px] font-black bg-luster-accent text-luster-header tracking-wider uppercase">
+                Release v1.0.0
+              </span>
+              <span className="text-xs font-mono text-luster-success font-bold">● APK READY</span>
+            </div>
+            <h2 className="text-base font-black text-luster-text tracking-wide">
+              INSTALL LUSTER 360 ON YOUR ANDROID PHONE
+            </h2>
+            <p className="text-xs text-luster-textMuted max-w-lg leading-relaxed">
+              Scan this QR code with your phone camera or download directly. Once installed, log in with operator credentials to link camera telemetry, hardware controls, and cloud uploads.
+            </p>
+            <p className="text-[11px] font-mono text-luster-accent">
+              Direct Phone URL: <span className="underline select-all">http://192.168.1.6:3001/luster360.apk</span>
+            </p>
+          </div>
+        </div>
+        <div className="flex flex-col sm:flex-row items-center gap-3 shrink-0">
+          <a
+            href="/luster360.apk"
+            download="Luster-360-v1.0.0.apk"
+            className="px-5 py-3 rounded-xl bg-luster-accent text-luster-header font-black text-xs tracking-wider flex items-center space-x-2 hover:bg-luster-accent/90 transition shadow-lg shadow-luster-accent/20"
+          >
+            <Smartphone className="w-4 h-4" />
+            <span>DOWNLOAD APK (53.6 MB)</span>
+          </a>
+        </div>
+      </div>
+
       {loading ? (
         <div className="p-16 text-center text-xs text-luster-textMuted">Loading live fleet telemetry...</div>
       ) : devices.length === 0 ? (
@@ -76,7 +117,7 @@ export default function DevicesPage() {
           <Smartphone className="w-10 h-10 text-luster-textDark mx-auto" />
           <h3 className="text-sm font-bold text-luster-text">0 Booths Connected</h3>
           <p className="text-xs text-luster-textMuted max-w-sm mx-auto">
-            When an operator logs into the LUSTER 360 mobile app on an Android phone or iPhone, the device will appear here instantly.
+            When an operator logs into the LUSTER 360 mobile app on an Android phone, the device will appear here instantly.
           </p>
         </div>
       ) : (

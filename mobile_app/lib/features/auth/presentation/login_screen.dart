@@ -168,7 +168,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     label: 'OPERATOR USERNAME',
                     hint: 'Enter your assigned username',
                     controller: _usernameController,
-                    prefixIcon: Icons.person_outline,
+                    prefixIcon: const Icon(Icons.person_outline, color: LusterColors.textDark, size: 20),
                   ),
                   const SizedBox(height: 18),
 
@@ -177,7 +177,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     hint: 'Enter your password',
                     controller: _passwordController,
                     obscureText: _obscurePassword,
-                    prefixIcon: Icons.lock_outline,
+                    prefixIcon: const Icon(Icons.lock_outline, color: LusterColors.textDark, size: 20),
                     suffixIcon: IconButton(
                       icon: Icon(
                         _obscurePassword
@@ -194,11 +194,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
                   // 5. Submit Button
                   LusterButton(
-                    text: authState.isLoading
+                    label: authState.isLoading
                         ? 'AUTHENTICATING...'
                         : 'UNLOCK BOOTH APPLICATION',
                     onPressed: authState.isLoading ? null : _handleLogin,
-                    icon: Icons.login_rounded,
+                    leadingIcon: Icons.login_rounded,
                   ),
 
                   const SizedBox(height: 24),

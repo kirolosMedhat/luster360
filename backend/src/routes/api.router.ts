@@ -43,6 +43,9 @@ apiRouter.get('/media/stream/:shortCode', (req, res, next) => videoController.st
 apiRouter.get('/media/download/:shortCode', (req, res, next) => videoController.downloadVideo(req, res, next));
 apiRouter.get('/media/thumbnail/:shortCode', (req, res, next) => videoController.thumbnail(req, res, next));
 apiRouter.get('/videos/resolve/:shortCode', (req, res, next) => videoController.resolveByCode(req, res, next));
+apiRouter.get('/videos/recent', (req, res, next) => videoController.listRecent(req, res, next));
+apiRouter.post('/captures/register', (req, res, next) => videoController.registerCapture(req, res, next));
+apiRouter.post('/captures/upload', uploadMiddleware.single('video'), (req, res, next) => videoController.uploadCapture(req, res, next));
 
 // ==========================================
 // DEVICES & TELEMETRY

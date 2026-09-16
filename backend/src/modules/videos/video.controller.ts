@@ -74,6 +74,35 @@ export class VideoController {
       next(err);
     }
   }
+
+  async listRecent(req: Request, res: Response, next: NextFunction) {
+    try {
+      const limit = Number(req.query.limit) || 20;
+      const videos = await videoService.listRecentVideos(limit);
+      res.json({ success: true, data: videos });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  async registerCapture(req: Request, res: Response, next: NextFunction) {
+    try {
+      const record = await videoService.registerCapture(req.body);
+      res.json({ success: true, data: record });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  async uploadCapture(req: Request, res: Response, next: NextFunction) {
+    try {
+      const file = req.file;
+      const record = await videoService.uploadAndRegisterCapture(req.body, file);
+      res.json({ success: true, data: record });
+    } catch (err) {
+      next(err);
+    }
+  }
 }
 
 export const videoController = new VideoController();

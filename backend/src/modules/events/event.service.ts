@@ -75,9 +75,10 @@ export class EventService {
       assetsFolderId: 'pending',
     };
 
+    const folderDisplayName = dto.eventDate ? `${dto.name} - ${dto.eventDate}` : `${dto.name} - ${new Date().toISOString().split('T')[0]}`;
     try {
-      driveFolders = await storage.createEventFolders(dto.name);
-      logger.info(`Provisioned Google Drive folders for "${dto.name}"`, { folders: driveFolders });
+      driveFolders = await storage.createEventFolders(folderDisplayName);
+      logger.info(`Provisioned Google Drive folders for "${folderDisplayName}"`, { folders: driveFolders });
     } catch (err: any) {
       logger.warn(`Could not provision Drive folders immediately: ${err.message}. Storage will retry.`);
     }
@@ -92,7 +93,8 @@ export class EventService {
       client_name: dto.clientName,
       client_contact: dto.clientContact || null,
       client_email: dto.clientEmail || null,
-      status: 'DRAFT',
+      status: 'ACTIVE',
+      started_at: new Date().toISOString(),
       gallery_slug: slug,
       gallery_visibility: dto.galleryPassword ? 'PASSWORD_PROTECTED' : 'PUBLIC',
       brand_primary_color: dto.brandPrimaryColor || '#86CFFF',

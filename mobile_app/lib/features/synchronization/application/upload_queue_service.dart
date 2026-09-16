@@ -87,18 +87,9 @@ class UploadQueueNotifier extends StateNotifier<UploadQueueState> {
   Future<void> processNextInQueue() async {
     if (_isDisposed || state.isProcessing || !state.isOnline) return;
 
-    final queuedTask = state.tasks.firstWhere(
-      (t) => t.status == UploadTaskStatus.queued,
-      orElse: () => const UploadTask(
-        id: '',
-        videoId: '',
-        eventId: '',
-        localVideoPath: '',
-        createdAt: null as dynamic,
-      ),
-    );
-
-    if (queuedTask.id.isEmpty) return;
+    final queuedTasks = state.tasks.where((t) => t.status == UploadTaskStatus.queued);
+    if (queuedTasks.isEmpty) return;
+    final queuedTask = queuedTasks.first;
 
     state = state.copyWith(isProcessing: true);
 

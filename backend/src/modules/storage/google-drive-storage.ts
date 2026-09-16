@@ -134,6 +134,7 @@ export class GoogleDriveStorage implements MediaStorage {
         parents: parents.length > 0 ? parents : undefined,
       },
       fields: 'id',
+      supportsAllDrives: true,
     });
 
     if (!res.data.id) {
@@ -175,6 +176,8 @@ export class GoogleDriveStorage implements MediaStorage {
       q: query,
       fields: 'files(id, name, mimeType, size, createdTime, webViewLink, webContentLink)',
       spaces: 'drive',
+      supportsAllDrives: true,
+      includeItemsFromAllDrives: true,
     });
 
     if (!res.data.files || res.data.files.length === 0) {
@@ -216,7 +219,19 @@ export class GoogleDriveStorage implements MediaStorage {
       },
       media,
       fields: 'id, name, mimeType, size, createdTime, webViewLink, webContentLink',
+      supportsAllDrives: true,
     });
+
+    try {
+      await drive.permissions.create({
+        fileId: res.data.id!,
+        requestBody: {
+          role: 'reader',
+          type: 'anyone',
+        },
+        supportsAllDrives: true,
+      });
+    } catch {}
 
     this.lastUploadTimestamp = new Date();
 

@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import '../lib/features/synchronization/application/upload_queue_service.dart';
+import 'package:luster_360/features/synchronization/application/upload_queue_service.dart';
 
 void main() {
   group('UploadQueue Backoff Tests', () {

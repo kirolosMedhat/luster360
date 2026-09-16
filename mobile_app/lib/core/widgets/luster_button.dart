@@ -86,9 +86,12 @@ class LusterButton extends StatelessWidget {
                   Icon(leadingIcon, color: fg, size: 20),
                   const SizedBox(width: 8),
                 ],
-                Text(
-                  label,
-                  style: LusterTypography.buttonLabel.copyWith(color: fg),
+                Flexible(
+                  child: Text(
+                    label,
+                    style: LusterTypography.buttonLabel.copyWith(color: fg),
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
                 if (trailingIcon != null && !isLoading) ...[
                   const SizedBox(width: 8),

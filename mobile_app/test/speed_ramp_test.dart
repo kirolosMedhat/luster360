@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import '../lib/features/editor/domain/speed_ramp_config.dart';
+import 'package:luster_360/features/editor/domain/speed_ramp_config.dart';
 
 void main() {
   group('SpeedRampConfig Tests', () {

@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import '../lib/core/utils/duration_formatter.dart';
+import 'package:luster_360/core/utils/duration_formatter.dart';
 
 void main() {
   group('DurationFormatter Tests', () {

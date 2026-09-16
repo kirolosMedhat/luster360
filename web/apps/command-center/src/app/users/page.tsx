@@ -25,7 +25,8 @@ export default function UsersPage() {
   const [password, setPassword] = useState('');
   const [role, setRole] = useState<'OPERATOR' | 'ADMIN'>('OPERATOR');
 
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+  // Relative URL routes through Next.js rewrites to backend port 4000 seamlessly
+  const apiUrl = '';
 
   const fetchUsers = async () => {
     try {

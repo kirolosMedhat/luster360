@@ -1,12 +1,12 @@
 import 'package:flutter_test/flutter_test.dart';
-import '../lib/features/editor/domain/speed_ramp_config.dart';
-import '../lib/features/rendering/application/rendering_service.dart';
+import 'package:luster_360/features/editor/domain/speed_ramp_config.dart';
+import 'package:luster_360/features/rendering/application/rendering_service.dart';
 
 void main() {
   group('RenderingService FFmpeg Builder Tests', () {
     test('Builds complete FFmpeg argument list with speed ramp and filter complex', () {
       final service = RenderingService();
-      const request = RenderJobRequest(
+      final request = RenderJobRequest(
         sourceFilePath: '/path/to/raw.mp4',
         outputFilePath: '/path/to/final.mp4',
         thumbnailFilePath: '/path/to/thumb.jpg',

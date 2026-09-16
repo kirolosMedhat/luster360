@@ -186,6 +186,25 @@ export class DatabaseService {
     return list;
   }
 
+  async listRecentVideos(limit = 20) {
+    if (this.isSupabaseLive) {
+      try {
+        const { data, error } = await this.supabase
+          .from('videos')
+          .select('*')
+          .order('created_at', { ascending: false })
+          .limit(limit);
+        if (!error && data && data.length > 0) return data;
+      } catch {
+        // Fallback
+      }
+    }
+
+    const list = Array.from(memoryDb.videos.values());
+    list.sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime());
+    return list.slice(0, limit);
+  }
+
   async upsertVideo(videoData: any) {
     if (this.isSupabaseLive) {
       try {

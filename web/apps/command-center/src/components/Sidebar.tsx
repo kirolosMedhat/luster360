@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, Smartphone, Calendar, HardDrive, Users, Settings, ExternalLink, Radio } from 'lucide-react';
+import { LayoutDashboard, Smartphone, Calendar, HardDrive, Users, Settings, ExternalLink, Radio, Video, Download } from 'lucide-react';
 
 export default function Sidebar() {
   const pathname = usePathname();
@@ -14,6 +14,7 @@ export default function Sidebar() {
 
   const navItems = [
     { name: 'Dashboard', href: '/', icon: LayoutDashboard },
+    { name: 'Mobile Booth 360', href: '/booth', icon: Video },
     { name: 'Fleet Devices', href: '/devices', icon: Smartphone },
     { name: 'Events Monitor', href: '/events', icon: Calendar },
     { name: 'Storage Health', href: '/storage', icon: HardDrive },
@@ -56,6 +57,21 @@ export default function Sidebar() {
           );
         })}
       </nav>
+
+      {/* Mobile App APK Download */}
+      <div className="p-4 border-t border-luster-border bg-gradient-to-br from-luster-header/60 to-luster-panel">
+        <a
+          href="/luster360.apk"
+          download="Luster-360-v1.0.0.apk"
+          className="flex items-center justify-center space-x-2 w-full py-2.5 px-3 bg-luster-accent/15 hover:bg-luster-accent text-luster-accent hover:text-luster-header border border-luster-accent/30 rounded-xl text-xs font-black transition tracking-wider shadow-sm group"
+        >
+          <Download className="w-4 h-4 transition-transform group-hover:-translate-y-0.5" />
+          <span>DOWNLOAD APK</span>
+        </a>
+        <p className="text-[10px] text-center text-luster-textDark mt-1.5 font-medium">
+          v1.0.0 (53.6 MB) • Android
+        </p>
+      </div>
 
       {/* Realtime Live Telemetry Indicator */}
       <div className="p-4 border-t border-luster-border bg-luster-surface/50">
