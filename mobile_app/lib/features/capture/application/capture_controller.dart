@@ -3,15 +3,25 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../domain/capture_state.dart';
 import '../../camera/data/phone_camera_device.dart';
+import '../../editor/domain/speed_ramp_config.dart';
+import '../../rendering/application/rendering_service.dart';
+import '../../synchronization/application/upload_queue_service.dart';
 import '../../../core/logging/app_logger.dart';
 
 class CaptureNotifier extends StateNotifier<CaptureState> {
   final PhoneCameraDevice cameraDevice;
+  final RenderingService renderingService;
+  final UploadQueueNotifier? uploadQueueNotifier;
   Timer? _countdownTimer;
   Timer? _recordingTimer;
   Timer? _autoReturnTimer;
 
-  CaptureNotifier(this.cameraDevice) : super(const CaptureState()) {
+  CaptureNotifier(
+    this.cameraDevice, {
+    RenderingService? renderingService,
+    this.uploadQueueNotifier,
+  })  : renderingService = renderingService ?? RenderingService(),
+        super(const CaptureState()) {
     _initCamera();
   }
 
@@ -110,11 +120,57 @@ class CaptureNotifier extends StateNotifier<CaptureState> {
       state = state.copyWith(
         lastCaptureResult: captureResult,
         workflowState: CaptureWorkflowState.rendering,
-        renderProgress: 0.1,
+        renderProgress: 0.15,
       );
 
-      // Execute simulated off-thread rendering pipeline for UI demo
-      await _simulateRendering(captureResult.filePath);
+      final rawPath = captureResult.filePath;
+      final outputCompositePath = rawPath.endsWith('.mp4')
+          ? rawPath.replaceAll('.mp4', '_composite.mp4')
+          : '${rawPath}_composite.mp4';
+      final thumbPath = '${outputCompositePath}.thumb.jpg';
+
+      state = state.copyWith(renderProgress: 0.35);
+
+      final renderRequest = RenderJobRequest(
+        sourceFilePath: rawPath,
+        outputFilePath: outputCompositePath,
+        thumbnailFilePath: thumbPath,
+        speedRamp: SpeedRampConfig.default360Preset,
+        colorFilter: VideoColorFilter.cinematic,
+        enableAudioDucking: true,
+      );
+
+      state = state.copyWith(renderProgress: 0.65);
+      final renderResult = await renderingService.executeRender(renderRequest);
+      state = state.copyWith(renderProgress: 0.95);
+
+      if (!renderResult.success) {
+        throw Exception('Render failed: composite file not created on disk.');
+      }
+
+      final shortCode = _generateShortCode();
+      final publicUrl = 'https://gallery.luster360.com/v/$shortCode';
+
+      // Enqueue to upload queue ONLY after composite file exists on disk
+      uploadQueueNotifier?.enqueueVideo(
+        videoId: shortCode,
+        eventId: 'active-event',
+        localVideoPath: outputCompositePath,
+        localThumbnailPath: thumbPath,
+      );
+
+      state = state.copyWith(
+        workflowState: CaptureWorkflowState.readyToShare,
+        renderedVideoPath: outputCompositePath,
+        thumbnailPath: thumbPath,
+        shortCode: shortCode,
+        publicUrl: publicUrl,
+        renderProgress: 1.0,
+        uploadProgress: 1.0,
+      );
+
+      // Auto return to READY after 12 seconds
+      _startAutoReturnCountdown(12);
     } catch (e) {
       AppLogger.error('Finish recording failed', e);
       state = state.copyWith(
@@ -122,30 +178,6 @@ class CaptureNotifier extends StateNotifier<CaptureState> {
         errorMessage: 'Capture finish error: $e',
       );
     }
-  }
-
-  Future<void> _simulateRendering(String rawPath) async {
-    // Progress loop simulating real frame progress
-    for (int p = 20; p <= 100; p += 20) {
-      await Future.delayed(const Duration(milliseconds: 300));
-      state = state.copyWith(renderProgress: p / 100.0);
-    }
-
-    final simulatedShortCode = _generateShortCode();
-    final simulatedPublicUrl = 'https://events.luster-photobooth.com/v/$simulatedShortCode';
-
-    state = state.copyWith(
-      workflowState: CaptureWorkflowState.readyToShare,
-      renderedVideoPath: rawPath,
-      thumbnailPath: '$rawPath.thumb.jpg',
-      shortCode: simulatedShortCode,
-      publicUrl: simulatedPublicUrl,
-      renderProgress: 1.0,
-      uploadProgress: 1.0,
-    );
-
-    // Auto return to READY after 12 seconds
-    _startAutoReturnCountdown(12);
   }
 
   void _startAutoReturnCountdown(int seconds) {
@@ -203,5 +235,10 @@ final phoneCameraDeviceProvider = Provider<PhoneCameraDevice>((ref) {
 
 final captureProvider = StateNotifierProvider<CaptureNotifier, CaptureState>((ref) {
   final camera = ref.watch(phoneCameraDeviceProvider);
-  return CaptureNotifier(camera);
+  final uploadQueue = ref.watch(uploadQueueProvider.notifier);
+  return CaptureNotifier(
+    camera,
+    renderingService: RenderingService(),
+    uploadQueueNotifier: uploadQueue,
+  );
 });

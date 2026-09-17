@@ -19,9 +19,33 @@ export interface InitiateUploadDTO {
 export class UploadService {
   /**
    * Generates a collision-resistant 6-character alphanumeric code for public sharing
+   * with collision retry loop against database (up to 5 attempts).
+   * Alphanumeric excluding ambiguous chars: 0, O, I, 1, l.
    */
+  public async generateUniqueShortCode(): Promise<string> {
+    const chars = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
+    for (let attempt = 0; attempt < 5; attempt++) {
+      let code = '';
+      for (let i = 0; i < 6; i++) {
+        code += chars.charAt(Math.floor(Math.random() * chars.length));
+      }
+      const existing = await db.getVideoByShortCode(code);
+      if (!existing) {
+        return code;
+      }
+      logger.warn(`Shortcode collision detected on attempt ${attempt + 1}: ${code}. Retrying...`);
+    }
+
+    // Extended 8-char fallback if 5 consecutive collisions
+    let fallbackCode = '';
+    for (let i = 0; i < 8; i++) {
+      fallbackCode += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return fallbackCode;
+  }
+
   public generateShortCode(): string {
-    const chars = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ'; // exclude ambiguous 0, 1, I, O
+    const chars = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
     let code = '';
     for (let i = 0; i < 6; i++) {
       code += chars.charAt(Math.floor(Math.random() * chars.length));
@@ -60,7 +84,7 @@ export class UploadService {
       const existingDriveFile = await storage.findFileByName(targetFolderId, dto.filename);
       if (existingDriveFile) {
         logger.info(`Idempotency check: File ${dto.filename} already found in Drive folder ${targetFolderId}`);
-        const shortCode = existingDbVideo?.short_code || this.generateShortCode();
+        const shortCode = existingDbVideo?.short_code || await this.generateUniqueShortCode();
         
         const verified = await db.upsertVideo({
           id: dto.videoId,
@@ -90,7 +114,7 @@ export class UploadService {
     }
 
     // New upload: mark as QUEUED -> UPLOADING
-    const shortCode = existingDbVideo?.short_code || this.generateShortCode();
+    const shortCode = existingDbVideo?.short_code || await this.generateUniqueShortCode();
     await db.upsertVideo({
       id: dto.videoId,
       event_id: dto.eventId,

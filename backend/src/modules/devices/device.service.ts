@@ -23,7 +23,7 @@ export interface HeartbeatDTO {
 }
 
 export class DeviceService {
-  private readonly OFFLINE_THRESHOLD_SECONDS = 35; // Dynamically considered offline after 35s without heartbeat
+  private readonly OFFLINE_THRESHOLD_SECONDS = 120; // Dynamically considered offline after 120s without heartbeat
 
   public async registerDevice(dto: RegisterDeviceDTO) {
     // Generate secure random token

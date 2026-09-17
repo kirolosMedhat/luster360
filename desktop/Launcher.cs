@@ -39,22 +39,12 @@ namespace Luster360 {
         static void Main() {
             string baseDir = AppDomain.CurrentDomain.BaseDirectory;
             string backendDir = Path.Combine(baseDir, "backend");
-            string commandCenterDir = Path.Combine(baseDir, "web", "apps", "command-center");
-
             // 1. Ensure Backend is running on port 4000
             if (!IsPortOpen("127.0.0.1", 4000) && Directory.Exists(backendDir)) {
                 string backendCmd = File.Exists(Path.Combine(backendDir, "dist", "server.js"))
                     ? "/c npm start"
                     : "/c npm run dev";
                 StartBackgroundService(backendDir, "cmd.exe", backendCmd);
-            }
-
-            // 2. Ensure Command Center is running in production mode on port 3001
-            if (!IsPortOpen("127.0.0.1", 3001) && Directory.Exists(commandCenterDir)) {
-                string webCmd = Directory.Exists(Path.Combine(commandCenterDir, ".next"))
-                    ? "/c npm start"
-                    : "/c npm run dev";
-                StartBackgroundService(commandCenterDir, "cmd.exe", webCmd);
             }
 
             // Wait up to 25 seconds for Command Center to accept connections

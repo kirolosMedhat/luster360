@@ -40,7 +40,7 @@ The relational database was initialized using the SQL Editor:
 #### Step 3: API Key Configuration
 Publishable and secret keys were retrieved for server and frontend authentication:
 ![Supabase API Keys](screenshots/03_supabase_api_keys_setup.png)
-*Figure 3: Supabase API keys configured into `backend/.env` and `web/apps/command-center/.env.local`.*
+*Figure 3: Supabase API keys configured into `backend/.env`.*
 
 ---
 
@@ -104,20 +104,15 @@ npm run dev
 - Connected to your live Supabase database
 - Connected to your Google Drive master storage
 
----
-
-### Step 2: Start the Operations Command Center
-Open a second terminal in the `web/apps/command-center/` directory:
-```bash
-cd "e:\SOFTWARE\Luster 360 app\web\apps\command-center"
-npm run dev
-```
-- Open your browser at: `http://localhost:3001`
-- **Dashboard Features**:
-  - Live device telemetry (Battery, Free Storage, Thermal state, Online/Offline status)
-  - Active event duration tracker (drift-free UTC calculation)
-  - Google Drive storage health monitoring (`/storage`)
-  - Event management and booth assignment (`/events`)
+### Step 2: Native Mobile Admin Console
+Administrative controls, live fleet monitoring, and event telemetry reside natively within the **LUSTER 360 Mobile App**:
+- Log in with `super_admin` or `company_admin` credentials to unlock the **Admin** tab.
+- **Admin Features**:
+  - Live device hardware telemetry (Battery %, Free Storage, Online/Offline status)
+  - Active event duration tracker and event drill-downs
+  - Google Drive storage quota and integration monitoring
+  - User and operator role management
+  - Statistical time-series charts and operator leaderboards
 
 ---
 

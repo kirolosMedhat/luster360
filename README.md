@@ -72,8 +72,6 @@ e:/SOFTWARE/Luster 360 app/
 │
 ├── web/
 │   ├── apps/
-│   │   ├── command-center/        # Operations Management Dashboard (Next.js 14)
-│   │   │   └── src/app/           # Live fleet monitoring, events & Drive storage health
 │   │   └── events-gallery/        # Customer-Facing Public Media Gallery (Next.js 14)
 │   │       └── src/app/           # Dynamic /event/[slug] & status-aware /v/[shortCode]
 │   └── packages/
@@ -152,15 +150,7 @@ npm run build     # Verify Next.js production build
 npm run dev       # Starts gallery on http://localhost:3000
 ```
 
-### 4.4 Start the Operations Command Center
-```bash
-cd web/apps/command-center
-npm install
-npm run build     # Verify Next.js production build
-npm run dev       # Starts command center on http://localhost:3001
-```
-
-### 4.5 Run Mobile Booth Tests
+### 4.4 Run Mobile Booth Tests
 ```bash
 cd mobile_app
 # Execute unit test suites (duration, speed ramp, upload queue, rendering)

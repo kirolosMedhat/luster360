@@ -155,21 +155,9 @@ sudo certbot --nginx -d api.luster360.com
 
 ---
 
-## 5. Next.js Command Center Deployment (Vercel / VPS)
-
-1. Connect your repository to Vercel or deploy to an internal enterprise host.
-2. Set Root Directory to: `web/apps/command-center`.
-3. Configure Environment Variables:
-   - `NEXT_PUBLIC_API_URL`: `https://api.luster360.com`
-   - `NEXT_PUBLIC_SUPABASE_URL`: `https://your-project.supabase.co`
-   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`: `eyJh...your_anon_key`
-4. Deploy. Assign custom domain `admin.luster360.com`.
-
----
-
-## 6. Verification Checklist
+## 5. Verification Checklist
 
 - [ ] Call `https://api.luster360.com/api/v1/system/health` — must return `"status": "healthy"` and `"storageProvider": "GOOGLE_DRIVE"`.
-- [ ] Visit `https://admin.luster360.com` — verify dashboard shows live device table and event list.
+- [ ] Log in via LUSTER 360 Mobile App as admin — verify Admin Console displays live fleet telemetry and events.
 - [ ] Test video upload ticket: `POST /api/v1/uploads/initiate`.
 - [ ] Verify test video stream with Range header: `curl -I -H "Range: bytes=0-1024" https://api.luster360.com/api/v1/media/stream/8F3K2A` — must return `HTTP/1.1 206 Partial Content`.

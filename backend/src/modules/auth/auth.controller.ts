@@ -12,7 +12,7 @@ const createUserSchema = z.object({
   email: z.string().email().optional(),
   fullName: z.string().min(2, 'Full name is required'),
   password: z.string().min(6, 'Password must be at least 6 characters'),
-  role: z.enum(['ADMIN', 'OPERATOR']).optional(),
+  role: z.enum(['super_admin', 'company_admin', 'operator', 'viewer', 'ADMIN', 'OPERATOR']).optional(),
 });
 
 export class AuthController {
@@ -56,11 +56,26 @@ export class AuthController {
   async createUser(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const params = createUserSchema.parse(req.body);
-      const user = await authService.createUser(params);
+      const user = await authService.createUser(params as any);
       res.status(201).json({
         success: true,
         data: user,
       });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  async updateRole(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const userId = req.params.id as string;
+      const { role } = req.body;
+      if (!role) {
+        res.status(400).json({ success: false, error: 'Role is required' });
+        return;
+      }
+      const success = await authService.updateUserRole(userId, role);
+      res.status(200).json({ success });
     } catch (err) {
       next(err);
     }

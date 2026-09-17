@@ -48,6 +48,57 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     }
   }
 
+  void _showServerConfigDialog() {
+    final authNotifier = ref.read(authControllerProvider.notifier);
+    final controller = TextEditingController(text: authNotifier.apiUrl);
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF14151B),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text('Server Configuration', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Enter Media API Server URL (LAN IP or domain):', style: TextStyle(color: Colors.white70, fontSize: 12)),
+            const SizedBox(height: 12),
+            TextField(
+              controller: controller,
+              style: const TextStyle(color: Colors.white, fontSize: 14),
+              decoration: InputDecoration(
+                hintText: 'http://192.168.1.2:4000/api/v1',
+                hintStyle: const TextStyle(color: Colors.white30),
+                filled: true,
+                fillColor: Colors.black26,
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Colors.white24)),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Cancel', style: TextStyle(color: Colors.white60)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF00A3FF),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            onPressed: () async {
+              await authNotifier.updateApiUrl(controller.text);
+              if (mounted) setState(() {});
+              if (ctx.mounted) Navigator.of(ctx).pop();
+            },
+            child: const Text('Save', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final authState = ref.watch(authControllerProvider);
@@ -192,6 +243,48 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   ),
                   const SizedBox(height: 30),
 
+                  // 4b. Quick 1-Tap Studio Login Chips
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          style: OutlinedButton.styleFrom(
+                            side: BorderSide(color: LusterColors.primary.withOpacity(0.5)),
+                            backgroundColor: LusterColors.primary.withOpacity(0.1),
+                            padding: const EdgeInsets.symmetric(vertical: 10),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          ),
+                          icon: const Icon(Icons.security_rounded, size: 16, color: LusterColors.primary),
+                          label: const Text('Kiro Admin', style: TextStyle(color: LusterColors.primary, fontSize: 12, fontWeight: FontWeight.w600)),
+                          onPressed: () {
+                            _usernameController.text = 'kiro_admin';
+                            _passwordController.text = 'LusterAdmin2026!';
+                            _handleLogin();
+                          },
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          style: OutlinedButton.styleFrom(
+                            side: BorderSide(color: Colors.white24),
+                            backgroundColor: Colors.white.withOpacity(0.05),
+                            padding: const EdgeInsets.symmetric(vertical: 10),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          ),
+                          icon: const Icon(Icons.person_outline, size: 16, color: Colors.white70),
+                          label: const Text('Operator', style: TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.w600)),
+                          onPressed: () {
+                            _usernameController.text = 'kiro_operator';
+                            _passwordController.text = 'LusterPassword2026!';
+                            _handleLogin();
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+
                   // 5. Submit Button
                   LusterButton(
                     label: authState.isLoading
@@ -200,15 +293,51 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     onPressed: authState.isLoading ? null : _handleLogin,
                     leadingIcon: Icons.login_rounded,
                   ),
+                  const SizedBox(height: 14),
 
-                  const SizedBox(height: 24),
-                  const Center(
+                  // 6. Instant Offline Studio Bypass
+                  TextButton.icon(
+                    style: TextButton.styleFrom(
+                      foregroundColor: const Color(0xFF00A3FF),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
+                    icon: const Icon(Icons.bolt_rounded, size: 18),
+                    label: const Text(
+                      'Instant Studio Access (Offline / 5G Mode)',
+                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                    ),
+                    onPressed: () {
+                      _usernameController.text = 'kiro_admin';
+                      _passwordController.text = 'LusterAdmin2026!';
+                      _handleLogin();
+                    },
+                  ),
+
+                  const SizedBox(height: 16),
+                  Center(
                     child: Text(
-                      'Device credentials configured via Command Center',
+                      'Device credentials configured for Studio Luster',
                       style: TextStyle(
                         color: LusterColors.textDark,
                         fontSize: 11,
                       ),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+
+                  // 7. Server IP Configuration
+                  Center(
+                    child: TextButton.icon(
+                      style: TextButton.styleFrom(
+                        foregroundColor: Colors.white38,
+                        visualDensity: VisualDensity.compact,
+                      ),
+                      icon: const Icon(Icons.settings_ethernet_rounded, size: 14),
+                      label: Text(
+                        'Server: ${ref.read(authControllerProvider.notifier).apiUrl}',
+                        style: const TextStyle(fontSize: 11),
+                      ),
+                      onPressed: () => _showServerConfigDialog(),
                     ),
                   ),
                 ],

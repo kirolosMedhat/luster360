@@ -137,7 +137,14 @@ class EventManagementScreen extends ConsumerWidget {
           // All Events List
           Text('ALL EVENTS', style: LusterTypography.bodySmall.copyWith(letterSpacing: 1.0)),
           const SizedBox(height: 8),
-          ...eventState.events.map((event) {
+          if (eventState.isLoading && eventState.events.isEmpty)
+            const Center(child: Padding(padding: EdgeInsets.all(32), child: CircularProgressIndicator(color: LusterColors.primaryBlue)))
+          else if (eventState.error != null && eventState.events.isEmpty)
+            Center(child: Padding(padding: const EdgeInsets.all(32), child: Text('Error: ${eventState.error}', style: const TextStyle(color: LusterColors.danger))))
+          else if (eventState.events.isEmpty)
+            const Center(child: Padding(padding: EdgeInsets.all(32), child: Text('No events found. Tap + to create an event.', style: TextStyle(color: LusterColors.textMuted))))
+          else
+            ...eventState.events.map((event) {
             final isSelected = eventState.currentEvent?.id == event.id;
             return Padding(
               padding: const EdgeInsets.only(bottom: 12),

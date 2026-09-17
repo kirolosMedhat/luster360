@@ -2,11 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../events/application/event_controller.dart';
-import '../../../core/theme/luster_colors.dart';
-import '../../../core/theme/luster_typography.dart';
-import '../../../core/widgets/luster_button.dart';
-import '../../../core/widgets/luster_card.dart';
-import '../../../core/widgets/luster_status_badge.dart';
+import '../../auth/application/auth_controller.dart';
 
 class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
@@ -14,209 +10,362 @@ class DashboardScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final eventState = ref.watch(eventProvider);
+    final authState = ref.watch(authControllerProvider);
+    final isAdmin = authState.user?.isAdmin ?? false;
+
+    // Real dynamic counts or fallback to studio metrics
+    final totalCaptures = eventState.events.fold<int>(0, (sum, e) => sum + e.videoCount);
+    final displayCaptures = totalCaptures > 0 ? '$totalCaptures' : '1.2k';
+    final eventsHosted = eventState.events.isNotEmpty ? '${eventState.events.length}' : '48';
 
     return Scaffold(
-      appBar: AppBar(
-        title: Row(
+      backgroundColor: const Color(0xFF0B0C10),
+      body: SafeArea(
+        child: ListView(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
           children: [
-            Image.asset(
-              'assets/images/logo.png',
-              height: 28,
-              errorBuilder: (_, __, ___) => const Icon(Icons.blur_on_rounded, color: LusterColors.primaryBlue),
-            ),
-            const SizedBox(width: 10),
-            Text('LUSTER 360', style: LusterTypography.titleLarge.copyWith(fontWeight: FontWeight.w800, letterSpacing: 1.0)),
-          ],
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.settings_outlined, color: LusterColors.text),
-            onPressed: () => context.push('/settings'),
-          ),
-        ],
-      ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          // 1. Live Active Event Hero Card
-          LusterCard(
-            borderColor: LusterColors.primaryBlue.withOpacity(0.6),
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            // 1. Studio Header (Studio Luster / Pro+ Plan)
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('ACTIVE EVENT', style: LusterTypography.bodySmall.copyWith(color: LusterColors.primaryBlue, fontWeight: FontWeight.w700)),
-                    const LusterStatusBadge(status: LusterBoothStatus.ready),
+                    const Text(
+                      'Studio Luster',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 26,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: -0.5,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      isAdmin ? 'Super Admin • 2 active devices' : 'Pro+ Plan • 2 active devices',
+                      style: const TextStyle(
+                        color: Color(0xFF8E95A5),
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
                   ],
                 ),
-                const SizedBox(height: 10),
-                Text(
-                  eventState.currentEvent?.name ?? 'Ahmed & Mariam Wedding',
-                  style: LusterTypography.displayMedium.copyWith(fontSize: 24),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  '${eventState.currentEvent?.venue ?? 'Four Seasons Nile Plaza'} • ${eventState.currentEvent?.clientName ?? 'Ahmed Hassan'}',
-                  style: LusterTypography.bodyMedium,
-                ),
-                const SizedBox(height: 16),
-                const Divider(),
-                const SizedBox(height: 12),
 
-                // Live Metrics
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Column(
+                // Settings Gear Badge with Cyan Indicator Dot
+                GestureDetector(
+                  onTap: () => context.push('/settings'),
+                  child: Stack(
+                    children: [
+                      Container(
+                        width: 46,
+                        height: 46,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: const Color(0xFF161822),
+                          border: Border.all(color: Colors.white12),
+                        ),
+                        child: const Icon(Icons.settings_outlined, color: Colors.white70, size: 22),
+                      ),
+                      Positioned(
+                        top: 4,
+                        right: 4,
+                        child: Container(
+                          width: 10,
+                          height: 10,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF00A3FF),
+                            shape: BoxShape.circle,
+                            border: Border.all(color: const Color(0xFF0B0C10), width: 2),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
+
+            // 2. Top Metric Cards (Total Captures & Events Hosted)
+            Row(
+              children: [
+                // Card 1: Total Captures
+                Expanded(
+                  child: Container(
+                    padding: const EdgeInsets.all(18),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF14151B),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: const Color(0xFF1E202B)),
+                    ),
+                    child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('CURRENT DURATION', style: LusterTypography.bodySmall),
-                        const SizedBox(height: 2),
-                        Text(eventState.formattedDuration, style: LusterTypography.monoTimer.copyWith(fontSize: 22)),
-                      ],
-                    ),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        Text('CAPTURES', style: LusterTypography.bodySmall),
-                        const SizedBox(height: 2),
-                        Text('${eventState.currentEvent?.videoCount ?? 127}', style: LusterTypography.titleLarge),
-                      ],
-                    ),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        Text('UPLOADED', style: LusterTypography.bodySmall),
-                        const SizedBox(height: 2),
+                        const Icon(Icons.videocam_outlined, color: Color(0xFF00A3FF), size: 24),
+                        const SizedBox(height: 14),
                         Text(
-                          '${eventState.currentEvent?.uploadedCount ?? 119} / ${eventState.currentEvent?.videoCount ?? 127}',
-                          style: LusterTypography.titleMedium.copyWith(color: LusterColors.success),
+                          displayCaptures,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 28,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        const Text(
+                          'Total Captures',
+                          style: TextStyle(
+                            color: Color(0xFF8E95A5),
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                          ),
                         ),
                       ],
                     ),
-                  ],
+                  ),
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(width: 14),
 
-                // Primary Booth Launch CTA
-                LusterButton(
-                  label: 'LAUNCH 360 BOOTH',
-                  leadingIcon: Icons.camera_alt_rounded,
-                  height: 54,
-                  onPressed: () => context.push('/booth-mode'),
+                // Card 2: Events Hosted
+                Expanded(
+                  child: Container(
+                    padding: const EdgeInsets.all(18),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF14151B),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: const Color(0xFF1E202B)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Icon(Icons.bolt_rounded, color: Color(0xFF00A3FF), size: 24),
+                        const SizedBox(height: 14),
+                        Text(
+                          eventsHosted,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 28,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        const Text(
+                          'Events Hosted',
+                          style: TextStyle(
+                            color: Color(0xFF8E95A5),
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
               ],
             ),
-          ),
-          const SizedBox(height: 20),
+            const SizedBox(height: 24),
 
-          // 2. Operational Quick Shortcuts
-          Text('BOOTH WORKFLOW', style: LusterTypography.bodySmall.copyWith(letterSpacing: 1.0)),
-          const SizedBox(height: 10),
-          Row(
-            children: [
-              Expanded(
-                child: LusterCard(
-                  onTap: () => context.push('/capture'),
-                  child: const Column(
-                    children: [
-                      Icon(Icons.videocam_rounded, color: LusterColors.primaryBlue, size: 32),
-                      SizedBox(height: 8),
-                      Text('Camera View', style: TextStyle(fontWeight: FontWeight.w600)),
-                      SizedBox(height: 2),
-                      Text('Capture Mode', style: TextStyle(color: LusterColors.textMuted, fontSize: 11)),
-                    ],
+            // 3. Vibrant "+ Create New Event" Pill Button
+            GestureDetector(
+              onTap: () => context.push('/events/new'),
+              child: Container(
+                height: 54,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF009BFF), Color(0xFF0072D6)],
+                    begin: Alignment.centerLeft,
+                    end: Alignment.centerRight,
                   ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: LusterCard(
-                  onTap: () => context.push('/editor'),
-                  child: const Column(
-                    children: [
-                      Icon(Icons.slow_motion_video_rounded, color: LusterColors.primaryBlue, size: 32),
-                      SizedBox(height: 8),
-                      Text('360 Editor', style: TextStyle(fontWeight: FontWeight.w600)),
-                      SizedBox(height: 2),
-                      Text('Speed & Overlays', style: TextStyle(color: LusterColors.textMuted, fontSize: 11)),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: LusterCard(
-                  onTap: () => context.push('/gallery'),
-                  child: const Column(
-                    children: [
-                      Icon(Icons.collections_rounded, color: LusterColors.primaryBlue, size: 32),
-                      SizedBox(height: 8),
-                      Text('Event Gallery', style: TextStyle(fontWeight: FontWeight.w600)),
-                      SizedBox(height: 2),
-                      Text('Review Spins', style: TextStyle(color: LusterColors.textMuted, fontSize: 11)),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: LusterCard(
-                  onTap: () => context.push('/events'),
-                  child: const Column(
-                    children: [
-                      Icon(Icons.event_note_rounded, color: LusterColors.primaryBlue, size: 32),
-                      SizedBox(height: 8),
-                      Text('Events List', style: TextStyle(fontWeight: FontWeight.w600)),
-                      SizedBox(height: 2),
-                      Text('Switch Event', style: TextStyle(color: LusterColors.textMuted, fontSize: 11)),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 20),
-
-          // 3. Device Diagnostics & Fleet Telemetry
-          Text('BOOTH TELEMETRY', style: LusterTypography.bodySmall.copyWith(letterSpacing: 1.0)),
-          const SizedBox(height: 10),
-          LusterCard(
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Row(
-                  children: [
-                    Icon(Icons.phone_android_rounded, color: LusterColors.textMuted),
-                    SizedBox(width: 12),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('LUSTER-360-001', style: TextStyle(fontWeight: FontWeight.w600)),
-                        Text('Battery: 84% • 42 GB Free', style: TextStyle(color: LusterColors.textMuted, fontSize: 12)),
-                      ],
+                  borderRadius: BorderRadius.circular(27),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFF009BFF).withOpacity(0.35),
+                      blurRadius: 18,
+                      offset: const Offset(0, 4),
                     ),
                   ],
                 ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: LusterColors.success.withOpacity(0.15),
-                    borderRadius: BorderRadius.circular(6),
+                child: const Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.add_rounded, color: Colors.white, size: 22),
+                    SizedBox(width: 8),
+                    Text(
+                      'Create New Event',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 32),
+
+            // 4. Upcoming Events Section Header
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Upcoming Events',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
                   ),
-                  child: const Text('ONLINE', style: TextStyle(color: LusterColors.success, fontWeight: FontWeight.w700, fontSize: 11)),
+                ),
+                GestureDetector(
+                  onTap: () => context.push('/events'),
+                  child: const Text(
+                    'View All',
+                    style: TextStyle(
+                      color: Color(0xFF00A3FF),
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                 ),
               ],
             ),
-          ),
-        ],
+            const SizedBox(height: 16),
+
+            // 5. Event Cards List (matching media_1789558957614.png)
+            _buildEventCard(
+              context: context,
+              title: 'Neon Nights Gala',
+              timeText: 'Tonight, 9 PM',
+              badgeIcon: Icons.videocam_rounded,
+              badgeText: '360 Slow-Mo',
+              imageGradient: const [Color(0xFF8A2387), Color(0xFFE94057), Color(0xFFF27121)],
+              onTap: () => context.push('/booth-mode'),
+            ),
+            const SizedBox(height: 12),
+
+            _buildEventCard(
+              context: context,
+              title: 'Smith Wedding',
+              timeText: 'Oct 24, 4 PM',
+              badgeIcon: Icons.movie_filter_rounded,
+              badgeText: 'Photo & GIF',
+              imageGradient: const [Color(0xFF2C3E50), Color(0xFF4CA1AF)],
+              onTap: () => context.push('/booth-mode'),
+            ),
+
+            // If real backend event exists and differs from presets, list it as well
+            if (eventState.currentEvent != null &&
+                eventState.currentEvent!.name != 'Neon Nights Gala' &&
+                eventState.currentEvent!.name != 'Smith Wedding') ...[
+              const SizedBox(height: 12),
+              _buildEventCard(
+                context: context,
+                title: eventState.currentEvent!.name,
+                timeText: eventState.currentEvent!.eventDate,
+                badgeIcon: Icons.videocam_rounded,
+                badgeText: 'Active Session',
+                imageGradient: const [Color(0xFF0052D4), Color(0xFF4364F7), Color(0xFF6FB1FC)],
+                onTap: () => context.push('/booth-mode'),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEventCard({
+    required BuildContext context,
+    required String title,
+    required String timeText,
+    required IconData badgeIcon,
+    required String badgeText,
+    required List<Color> imageGradient,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: const Color(0xFF14151B),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: const Color(0xFF1E202B)),
+        ),
+        child: Row(
+          children: [
+            // Event Thumbnail
+            Container(
+              width: 58,
+              height: 58,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(16),
+                gradient: LinearGradient(
+                  colors: imageGradient,
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+              ),
+              child: const Icon(Icons.music_note_rounded, color: Colors.white60, size: 28),
+            ),
+            const SizedBox(width: 14),
+
+            // Event Details
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    timeText,
+                    style: const TextStyle(
+                      color: Color(0xFF8E95A5),
+                      fontSize: 13,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+
+                  // Pill Tag
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF1C1E28),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(badgeIcon, size: 12, color: Colors.white70),
+                        const SizedBox(width: 4),
+                        Text(
+                          badgeText,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // Trailing Chevron
+            const Icon(Icons.chevron_right_rounded, color: Color(0xFF8E95A5), size: 24),
+          ],
+        ),
       ),
     );
   }

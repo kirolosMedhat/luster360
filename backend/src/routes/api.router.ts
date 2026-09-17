@@ -6,7 +6,8 @@ import { deviceController } from '../modules/devices/device.controller';
 import { galleryController } from '../modules/galleries/gallery.controller';
 import { systemController } from '../modules/system/system.controller';
 import { authController } from '../modules/auth/auth.controller';
-import { authenticateDeviceOrAdmin } from '../middleware/auth.middleware';
+import { adminController } from '../modules/admin/admin.controller';
+import { authenticateDeviceOrAdmin, requireRole } from '../middleware/auth.middleware';
 
 export const apiRouter = Router();
 
@@ -56,14 +57,30 @@ apiRouter.post('/devices/disconnect', (req, res, next) => deviceController.disco
 apiRouter.get('/devices/fleet', (req, res, next) => deviceController.getFleet(req, res, next));
 
 // ==========================================
+// ADMIN AUTH MIDDLEWARE
+// ==========================================
+const adminAuth = [authenticateDeviceOrAdmin, requireRole(['super_admin', 'company_admin'])];
+
+// ==========================================
 // OPERATOR AUTHENTICATION & USER MANAGEMENT
 // ==========================================
 apiRouter.post('/auth/login', (req, res, next) => authController.login(req, res, next));
-apiRouter.get('/auth/users', (req, res, next) => authController.listUsers(req, res, next));
-apiRouter.post('/auth/users', (req, res, next) => authController.createUser(req, res, next));
-apiRouter.delete('/auth/users/:id', (req, res, next) => authController.deleteUser(req, res, next));
+apiRouter.get('/auth/users', ...adminAuth, (req, res, next) => authController.listUsers(req, res, next));
+apiRouter.post('/auth/users', ...adminAuth, (req, res, next) => authController.createUser(req, res, next));
+apiRouter.delete('/auth/users/:id', ...adminAuth, (req, res, next) => authController.deleteUser(req, res, next));
 
 // ==========================================
 // PUBLIC GALLERIES (CUSTOMER FACING)
 // ==========================================
 apiRouter.get('/galleries/:slug', (req, res, next) => galleryController.getGallery(req, res, next));
+
+// ==========================================
+// ADMIN CONSOLE & FLEET GOVERNANCE (ROLE PROTECTED)
+// ==========================================
+
+apiRouter.get('/admin/summary', ...adminAuth, (req, res, next) => adminController.getSummary(req, res, next));
+apiRouter.get('/admin/analytics', ...adminAuth, (req, res, next) => adminController.getAnalytics(req, res, next));
+apiRouter.get('/admin/events/:id/drilldown', ...adminAuth, (req, res, next) => adminController.getEventDrilldown(req, res, next));
+apiRouter.get('/admin/storage/status', ...adminAuth, (req, res, next) => adminController.getStorageStatus(req, res, next));
+apiRouter.post('/admin/devices/:id/deauthorize', ...adminAuth, (req, res, next) => adminController.deauthorizeDevice(req, res, next));
+apiRouter.put('/admin/users/:id/role', ...adminAuth, (req, res, next) => authController.updateRole(req, res, next));

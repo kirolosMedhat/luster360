@@ -198,6 +198,31 @@ class EventNotifier extends StateNotifier<EventState> {
     state = state.copyWith(events: updatedList, currentEvent: updated);
   }
 
+  void createEvent({
+    required String name,
+    required String clientName,
+    required String venue,
+    required DateTime date,
+  }) {
+    final id = 'evt_${DateTime.now().millisecondsSinceEpoch}';
+    final dateStr = '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+    final slug = name.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]+'), '-');
+    final newEvent = EventModel(
+      id: id,
+      name: name,
+      eventDate: dateStr,
+      clientName: clientName,
+      venue: venue,
+      status: 'ACTIVE',
+      startedAt: DateTime.now().toUtc(),
+      gallerySlug: slug,
+    );
+    final updatedList = [newEvent, ...state.events];
+    state = state.copyWith(events: updatedList, currentEvent: newEvent);
+    _updateDuration();
+    AppLogger.info('Created and activated event: $name ($id)');
+  }
+
   @override
   void dispose() {
     _durationTimer?.cancel();

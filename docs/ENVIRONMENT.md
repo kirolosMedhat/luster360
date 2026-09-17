@@ -41,17 +41,7 @@ Environment variables in LUSTER 360 are divided into two security tiers:
 
 ---
 
-## 4. Operations Command Center (`web/apps/command-center/.env.local`)
-
-| Variable | Client Safe | Default / Example | Description |
-|---|---|---|---|
-| `NEXT_PUBLIC_API_URL` | Yes | `http://localhost:4000` | Base URL of the Luster Media API |
-| `NEXT_PUBLIC_SUPABASE_URL` | Yes | `https://xyzcompany.supabase.co` | Supabase project URL for realtime subscriptions |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Yes | `eyJh...` | Supabase public anonymous key |
-
----
-
-## 5. Mobile Booth Application (Flutter `--dart-define`)
+## 4. Mobile Booth Application (Flutter `--dart-define`)
 
 | Parameter | Default | Production Example |
 |---|---|---|

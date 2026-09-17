@@ -3,13 +3,15 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:camera/camera.dart';
 import 'package:go_router/go_router.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 import '../application/capture_controller.dart';
 import '../domain/capture_state.dart';
 import '../../events/application/event_controller.dart';
 import '../../../core/theme/luster_colors.dart';
 import '../../../core/theme/luster_typography.dart';
-import '../../../core/widgets/luster_dialog.dart';
-import '../../../core/widgets/luster_text_field.dart';
+import 'widgets/animated_logo_attract_widget.dart';
+import 'widgets/booth_shutter_button.dart';
+import 'widgets/camera_grid_overlay.dart';
 
 class BoothModeScreen extends ConsumerStatefulWidget {
   const BoothModeScreen({super.key});
@@ -19,51 +21,43 @@ class BoothModeScreen extends ConsumerStatefulWidget {
 }
 
 class _BoothModeScreenState extends ConsumerState<BoothModeScreen> {
+  bool _showSettingsSheet = false;
+
   @override
   void initState() {
     super.initState();
-    // Enable immersive fullscreen
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
   }
 
   @override
   void dispose() {
-    // Restore normal system UI
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     super.dispose();
   }
 
-  void _showExitPinDialog() {
-    final pinController = TextEditingController();
-    LusterDialog.show(
+  void _showExitDialog() {
+    showDialog(
       context: context,
-      title: 'Exit Booth Mode',
-      confirmLabel: 'Exit',
-      cancelLabel: 'Stay in Booth',
-      onConfirm: () {
-        if (pinController.text == '1234') {
-          Navigator.of(context).pop();
-          context.pop();
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Invalid Operator PIN. Default is 1234.'),
-              backgroundColor: LusterColors.danger,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF14151B),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text('Exit Booth Mode?', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        content: const Text('Do you want to return to the studio dashboard?', style: TextStyle(color: Colors.white70)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Stay', style: TextStyle(color: Colors.white60)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF00A3FF),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             ),
-          );
-        }
-      },
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Text('Enter 4-digit Operator PIN to unlock controls:'),
-          const SizedBox(height: 16),
-          LusterTextField(
-            label: 'Operator PIN',
-            hint: '••••',
-            controller: pinController,
-            keyboardType: TextInputType.number,
-            obscureText: true,
+            onPressed: () {
+              Navigator.of(ctx).pop();
+              context.pop();
+            },
+            child: const Text('Exit to Studio', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
           ),
         ],
       ),
@@ -74,15 +68,15 @@ class _BoothModeScreenState extends ConsumerState<BoothModeScreen> {
   Widget build(BuildContext context) {
     final captureState = ref.watch(captureProvider);
     final captureNotifier = ref.read(captureProvider.notifier);
-    final eventState = ref.watch(eventProvider);
     final camera = ref.watch(phoneCameraDeviceProvider);
+    final isStandby = captureState.workflowState == CaptureWorkflowState.ready;
 
     return Scaffold(
       backgroundColor: Colors.black,
       body: Stack(
         fit: StackFit.expand,
         children: [
-          // 1. Fullscreen Viewfinder
+          // 1. Fullscreen Camera Viewfinder
           if (camera.controller != null && camera.controller!.value.isInitialized)
             Center(
               child: AspectRatio(
@@ -91,58 +85,94 @@ class _BoothModeScreenState extends ConsumerState<BoothModeScreen> {
               ),
             )
           else
-            Container(color: Colors.black),
-
-          // 2. Minimalist Booth Mode Header (Exit PIN button on top right)
-          SafeArea(
-            child: Align(
-              alignment: Alignment.topRight,
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: GestureDetector(
-                  onTap: _showExitPinDialog,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: Colors.black54,
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: Colors.white24),
-                    ),
-                    child: const Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.lock_outline_rounded, color: Colors.white70, size: 16),
-                        SizedBox(width: 6),
-                        Text('EXIT BOOTH', style: TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.w600)),
-                      ],
-                    ),
-                  ),
+            Container(
+              color: const Color(0xFF0A0B10),
+              child: const Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.videocam_outlined, color: Colors.white30, size: 48),
+                    SizedBox(height: 12),
+                    Text('Camera Initializing...', style: TextStyle(color: Colors.white38, fontSize: 13)),
+                  ],
                 ),
               ),
             ),
-          ),
 
-          // 3. Large Event Title on Top Left
+          // 2. Rule-of-Thirds Grid Overlay (as seen in media_1789558971248.png)
+          const CameraGridOverlay(),
+
+          // 3. Top Header Bar Overlay
           SafeArea(
             child: Align(
-              alignment: Alignment.topLeft,
+              alignment: Alignment.topCenter,
               child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(
-                      'LUSTER 360',
-                      style: LusterTypography.bodySmall.copyWith(
-                        color: LusterColors.primaryBlue,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: 2.0,
+                    // Top Left: Close Button (Circular dark badge)
+                    GestureDetector(
+                      onTap: _showExitDialog,
+                      child: Container(
+                        width: 44,
+                        height: 44,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: Colors.black.withOpacity(0.55),
+                          border: Border.all(color: Colors.white12),
+                        ),
+                        child: const Icon(Icons.close_rounded, color: Colors.white, size: 22),
                       ),
                     ),
-                    Text(
-                      eventState.currentEvent?.name ?? 'Ahmed & Mariam Wedding',
-                      style: LusterTypography.titleLarge.copyWith(color: Colors.white),
+
+                    // Top Center: Camera Status Pill (e.g. GoPro Hero 11 / Camera Active)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withOpacity(0.65),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: Colors.white12),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            width: 8,
+                            height: 8,
+                            decoration: const BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: Color(0xFF00E676),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          const Text(
+                            'GoPro Hero 11',
+                            style: TextStyle(
+                              color: Color(0xFF00E676),
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    // Top Right: Tune / Settings Button (Circular dark badge)
+                    GestureDetector(
+                      onTap: () {
+                        setState(() => _showSettingsSheet = !_showSettingsSheet);
+                      },
+                      child: Container(
+                        width: 44,
+                        height: 44,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: Colors.black.withOpacity(0.55),
+                          border: Border.all(color: Colors.white12),
+                        ),
+                        child: const Icon(Icons.tune_rounded, color: Colors.white, size: 20),
+                      ),
                     ),
                   ],
                 ),
@@ -150,99 +180,287 @@ class _BoothModeScreenState extends ConsumerState<BoothModeScreen> {
             ),
           ),
 
-          // 4. Large Countdown Display
-          if (captureState.workflowState == CaptureWorkflowState.countdown)
-            Container(
-              color: Colors.black54,
-              child: Center(
-                child: Text(
-                  '${captureState.countdownRemaining}',
-                  style: LusterTypography.heroCountdown.copyWith(fontSize: 160),
-                ),
-              ),
-            ),
-
-          // 5. Recording Overlay
-          if (captureState.workflowState == CaptureWorkflowState.recording)
-            Center(
+          // 4. Quick Tune Settings Sheet Overlay
+          if (_showSettingsSheet)
+            Positioned(
+              top: 80,
+              right: 16,
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                width: 220,
+                padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: LusterColors.stateRecording.withOpacity(0.85),
-                  borderRadius: BorderRadius.circular(30),
+                  color: const Color(0xFF14151B).withOpacity(0.95),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: Colors.white24),
+                  boxShadow: [
+                    BoxShadow(color: Colors.black.withOpacity(0.5), blurRadius: 20),
+                  ],
                 ),
-                child: Text(
-                  '00:${captureState.elapsedRecordingSeconds.toString().padLeft(2, '0')}',
-                  style: LusterTypography.displayLarge.copyWith(fontSize: 48, color: Colors.white),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Quick Controls', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+                    const SizedBox(height: 12),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text('Torch', style: TextStyle(color: Colors.white70, fontSize: 13)),
+                        Switch(
+                          value: captureState.isTorchOn,
+                          activeColor: const Color(0xFF00A3FF),
+                          onChanged: (_) => captureNotifier.toggleTorch(),
+                        ),
+                      ],
+                    ),
+                    const Divider(color: Colors.white10),
+                    const Text('Countdown Timer', style: TextStyle(color: Colors.white70, fontSize: 12)),
+                    const SizedBox(height: 6),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [3, 5, 10].map((s) {
+                        final isSel = captureState.totalCountdownSeconds == s;
+                        return GestureDetector(
+                          onTap: () => captureNotifier.setCountdownDuration(s),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: isSel ? const Color(0xFF00A3FF) : Colors.white10,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              '${s}s',
+                              style: TextStyle(
+                                color: isSel ? Colors.black : Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ],
                 ),
               ),
             ),
 
-          // 6. Huge Tactile Record Button (Ready State)
-          if (captureState.workflowState == CaptureWorkflowState.ready)
+          // 5. ANIMATED LOGO VIDEO / ATTRACT SEQUENCE (Before Recording)
+          if (isStandby)
+            Positioned.fill(
+              child: Align(
+                alignment: const Alignment(0, -0.15),
+                child: const AnimatedLogoAttractWidget(size: 240),
+              ),
+            ),
+
+          // 6. Standby Prompt & Tactile Shutter Button (as seen in media_1789558971248.png)
+          if (isStandby)
             SafeArea(
               child: Align(
                 alignment: Alignment.bottomCenter,
                 child: Padding(
-                  padding: const EdgeInsets.only(bottom: 48),
-                  child: GestureDetector(
-                    onTap: () => captureNotifier.startCaptureSession(),
-                    child: Container(
-                      width: 120,
-                      height: 120,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white, width: 5),
-                        boxShadow: [
-                          BoxShadow(
-                            color: LusterColors.primaryBlue.withOpacity(0.4),
-                            blurRadius: 30,
-                            spreadRadius: 5,
-                          ),
-                        ],
-                      ),
-                      child: Center(
-                        child: Container(
-                          width: 96,
-                          height: 96,
-                          decoration: const BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: LusterColors.stateRecording,
-                          ),
-                          child: const Icon(Icons.touch_app_rounded, color: Colors.white, size: 48),
+                  padding: const EdgeInsets.only(bottom: 36),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'TAP TO START SEQUENCE',
+                        style: TextStyle(
+                          color: const Color(0xFFD4AF37).withOpacity(0.85),
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 2.0,
                         ),
                       ),
-                    ),
+                      const SizedBox(height: 20),
+                      BoothShutterButton(
+                        onTap: () {
+                          if (_showSettingsSheet) {
+                            setState(() => _showSettingsSheet = false);
+                          }
+                          captureNotifier.startCaptureSession();
+                        },
+                      ),
+                    ],
                   ),
                 ),
               ),
             ),
 
-          // 7. Video Ready Display & Auto-return Timer
-          if (captureState.workflowState == CaptureWorkflowState.readyToShare)
+          // 7. Large Animated Countdown Overlay
+          if (captureState.workflowState == CaptureWorkflowState.countdown)
             Container(
-              color: Colors.black87,
+              color: Colors.black.withOpacity(0.65),
               child: Center(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(Icons.check_circle_rounded, color: LusterColors.success, size: 80),
-                    const SizedBox(height: 16),
-                    Text('GREAT 360 SPIN!', style: LusterTypography.displayLarge),
-                    const SizedBox(height: 8),
-                    Text('Your video is saved & ready', style: LusterTypography.bodyLarge),
-                    const SizedBox(height: 32),
-                    ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: LusterColors.primaryBlue,
-                        foregroundColor: LusterColors.darkNavy,
-                        padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    const Text(
+                      'GET READY',
+                      style: TextStyle(
+                        color: Color(0xFF00A3FF),
+                        fontSize: 24,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 4.0,
                       ),
-                      onPressed: () => captureNotifier.resetToReady(),
-                      child: const Text('READY FOR NEXT GUEST', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      '${captureState.countdownRemaining}',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 160,
+                        fontWeight: FontWeight.w900,
+                        fontFamily: 'monospace',
+                      ),
                     ),
                   ],
+                ),
+              ),
+            ),
+
+          // 8. Recording State Indicator
+          if (captureState.workflowState == CaptureWorkflowState.recording)
+            Center(
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 14),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE50914).withOpacity(0.9),
+                  borderRadius: BorderRadius.circular(30),
+                  boxShadow: [
+                    BoxShadow(color: const Color(0xFFE50914).withOpacity(0.5), blurRadius: 30, spreadRadius: 4),
+                  ],
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 12,
+                      height: 12,
+                      decoration: const BoxDecoration(shape: BoxShape.circle, color: Colors.white),
+                    ),
+                    const SizedBox(width: 12),
+                    Text(
+                      'RECORDING: 00:${captureState.elapsedRecordingSeconds.toString().padLeft(2, '0')}',
+                      style: const TextStyle(fontSize: 22, color: Colors.white, fontWeight: FontWeight.bold),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+          // 9. Rendering State Overlay
+          if (captureState.workflowState == CaptureWorkflowState.rendering ||
+              captureState.workflowState == CaptureWorkflowState.processing)
+            Container(
+              color: Colors.black87,
+              child: Center(
+                child: Container(
+                  margin: const EdgeInsets.all(32),
+                  padding: const EdgeInsets.all(28),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF14151B),
+                    borderRadius: BorderRadius.circular(24),
+                    border: Border.all(color: const Color(0xFF00A3FF).withOpacity(0.5)),
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const CircularProgressIndicator(color: Color(0xFF00A3FF)),
+                      const SizedBox(height: 20),
+                      const Text(
+                        'PROCESSING 360 MASTER',
+                        style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold, letterSpacing: 1.5),
+                      ),
+                      const SizedBox(height: 8),
+                      const Text(
+                        'Speed ramp, color grading & frame burn-in',
+                        style: TextStyle(color: Colors.white60, fontSize: 12),
+                      ),
+                      const SizedBox(height: 16),
+                      LinearProgressIndicator(
+                        value: captureState.renderProgress,
+                        backgroundColor: Colors.white10,
+                        valueColor: const AlwaysStoppedAnimation(Color(0xFF00A3FF)),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+
+          // 10. Ready to Share Screen with Live QR Code
+          if (captureState.workflowState == CaptureWorkflowState.readyToShare)
+            Container(
+              color: const Color(0xF2090A0E),
+              padding: const EdgeInsets.all(24),
+              child: Center(
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(18),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(20),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFF00A3FF).withOpacity(0.4),
+                              blurRadius: 32,
+                              spreadRadius: 4,
+                            ),
+                          ],
+                        ),
+                        child: QrImageView(
+                          data: captureState.publicUrl ?? 'https://gallery.luster360.com/v/${captureState.shortCode}',
+                          version: QrVersions.auto,
+                          size: 200.0,
+                          backgroundColor: Colors.white,
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                      const Text(
+                        'SCAN TO DOWNLOAD',
+                        style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: 1.2),
+                      ),
+                      const SizedBox(height: 8),
+                      const Text(
+                        'Scan with your phone camera to download your 360 video instantly',
+                        style: TextStyle(color: Colors.white60, fontSize: 13),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 28),
+                      GestureDetector(
+                        onTap: () => captureNotifier.resetToReady(),
+                        child: Container(
+                          width: double.infinity,
+                          constraints: const BoxConstraints(maxWidth: 320),
+                          height: 54,
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              colors: [Color(0xFF00A3FF), Color(0xFF0077EE)],
+                            ),
+                            borderRadius: BorderRadius.circular(27),
+                            boxShadow: [
+                              BoxShadow(
+                                color: const Color(0xFF00A3FF).withOpacity(0.4),
+                                blurRadius: 20,
+                                spreadRadius: 2,
+                              ),
+                            ],
+                          ),
+                          child: const Center(
+                            child: Text(
+                              'READY FOR NEXT GUEST',
+                              style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 15),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),

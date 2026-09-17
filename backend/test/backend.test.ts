@@ -25,7 +25,7 @@ test('EventService: Server-Independent Duration Calculation', () => {
   assert.strictEqual(completedResult.formatted, '59m 59s');
 });
 
-test('UploadService: Short Code Generation', () => {
+test('UploadService: Short Code Generation & Collision Retry Loop', async () => {
   const uploadService = new UploadService();
   const code1 = uploadService.generateShortCode();
   const code2 = uploadService.generateShortCode();
@@ -36,6 +36,11 @@ test('UploadService: Short Code Generation', () => {
   // Ensure no ambiguous characters: 0, 1, I, O
   assert.strictEqual(/[01IO]/.test(code1), false);
   assert.strictEqual(/[01IO]/.test(code2), false);
+
+  // Test async unique short code generation with collision avoidance
+  const uniqueCode = await uploadService.generateUniqueShortCode();
+  assert.ok(uniqueCode.length >= 6);
+  assert.strictEqual(/[01IO]/.test(uniqueCode), false);
 });
 
 test('MediaStorage: Mock Storage Folder Provisioning and Idempotent Upload', async () => {
@@ -111,4 +116,141 @@ test('DeviceService: Telemetry and Dynamic Offline Calculation', async () => {
   assert.strictEqual(testDev.calculatedStatus, 'ONLINE');
   assert.strictEqual(testDev.currentState, 'RECORDING');
   assert.strictEqual(testDev.battery_level, 95);
+
+  // Test dynamic offline verification: simulate heartbeat 130s ago (>120s threshold)
+  const pastTimestamp = new Date(Date.now() - 130 * 1000).toISOString();
+  const { db } = await import('../src/modules/database/db');
+  await db.upsertDevice({
+    id: registered.device.id,
+    device_identifier: 'LUSTER-360-TEST-01',
+    last_heartbeat: pastTimestamp,
+    status: 'ONLINE',
+  });
+
+  const fleetAfterTimeout = await deviceService.getFleetStatus();
+  const timedOutDev = fleetAfterTimeout.find((d: any) => d.device_identifier === 'LUSTER-360-TEST-01');
+  assert.ok(timedOutDev);
+  assert.strictEqual(timedOutDev.calculatedStatus, 'OFFLINE', 'Device must be flagged OFFLINE when last heartbeat >120s');
+  assert.strictEqual(timedOutDev.currentState, 'OFFLINE');
+});
+
+test('RBAC Middleware: Role-Based 403 Forbidden Enforcement', async () => {
+  const { requireRole } = await import('../src/middleware/auth.middleware');
+  const adminGuard = requireRole(['super_admin', 'company_admin']);
+
+  // Case 1: Super admin allowed
+  let nextCalled = false;
+  const mockReqAdmin = { user: { role: 'super_admin' }, userRole: 'super_admin' } as any;
+  const mockResAdmin = {} as any;
+  adminGuard(mockReqAdmin, mockResAdmin, () => { nextCalled = true; });
+  assert.strictEqual(nextCalled, true, 'Super Admin should be allowed through guard');
+
+  // Case 2: Operator blocked with 403 Forbidden
+  let statusCode = 0;
+  let responseBody: any = null;
+  const mockReqOperator = { user: { role: 'operator' }, userRole: 'operator' } as any;
+  const mockResOperator = {
+    status(code: number) {
+      statusCode = code;
+      return this;
+    },
+    json(body: any) {
+      responseBody = body;
+      return this;
+    },
+  } as any;
+
+  adminGuard(mockReqOperator, mockResOperator, () => {
+    assert.fail('Operator should NOT reach next()');
+  });
+
+  assert.strictEqual(statusCode, 403, 'Operator must be rejected with HTTP 403');
+  assert.strictEqual(responseBody?.error?.code, 'FORBIDDEN');
+});
+
+test('AdminService: Fleet Summary, Analytics and Device Decommission', async () => {
+  const { adminService } = await import('../src/modules/admin/admin.service');
+  
+  // Test Summary
+  const summary = await adminService.getSummary();
+  assert.ok(summary);
+  assert.ok(typeof summary.activeDevicesCount === 'number');
+  assert.ok(typeof summary.totalCaptures === 'number');
+  assert.ok(Array.isArray(summary.alerts));
+
+  // Test Analytics
+  const analytics = await adminService.getAnalytics();
+  assert.ok(analytics);
+  assert.ok(Array.isArray(analytics.captureVolume));
+  assert.ok(analytics.captureVolume.length === 7);
+  assert.ok(analytics.modeBreakdown.slowMo > 0);
+
+  // Test Deauthorize Device
+  const deauthResult = await adminService.deauthorizeDevice('LUSTER-360-TEST-01');
+  assert.strictEqual(deauthResult.success, true);
+});
+
+test('RBAC Integration: Non-Admin Roles Blocked Across All Admin Endpoints', async () => {
+  const { requireRole, authenticateDeviceOrAdmin } = await import('../src/middleware/auth.middleware');
+  const adminGuard = requireRole(['super_admin', 'company_admin']);
+
+  const protectedEndpoints = [
+    '/admin/summary',
+    '/admin/analytics',
+    '/admin/events/e-01/drilldown',
+    '/admin/storage/status',
+    '/admin/devices/LUSTER-01/deauthorize',
+    '/admin/users/u-01/role',
+    '/auth/users',
+  ];
+
+  const unauthorizedRoles = ['operator', 'viewer', 'guest', ''];
+
+  for (const role of unauthorizedRoles) {
+    for (const endpoint of protectedEndpoints) {
+      let statusCode = 0;
+      let responseBody: any = null;
+
+      const mockReq = {
+        path: endpoint,
+        user: { role },
+        userRole: role,
+        headers: {},
+      } as any;
+
+      const mockRes = {
+        status(code: number) {
+          statusCode = code;
+          return this;
+        },
+        json(body: any) {
+          responseBody = body;
+          return this;
+        },
+      } as any;
+
+      adminGuard(mockReq, mockRes, () => {
+        assert.fail(`Role "${role}" must NOT access ${endpoint}`);
+      });
+
+      assert.strictEqual(
+        statusCode,
+        403,
+        `Role "${role}" on ${endpoint} must return HTTP 403 Forbidden`
+      );
+      assert.strictEqual(responseBody?.error?.code, 'FORBIDDEN');
+    }
+  }
+
+  // Verify company_admin and super_admin are allowed
+  for (const allowedRole of ['super_admin', 'company_admin']) {
+    let allowed = false;
+    const mockReq = {
+      path: '/admin/summary',
+      user: { role: allowedRole },
+      userRole: allowedRole,
+    } as any;
+    adminGuard(mockReq, {} as any, () => { allowed = true; });
+    assert.strictEqual(allowed, true, `Role "${allowedRole}" must be permitted on admin endpoints`);
+  }
 });

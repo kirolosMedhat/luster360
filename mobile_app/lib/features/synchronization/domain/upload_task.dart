@@ -1,6 +1,10 @@
 enum UploadTaskStatus {
+  capturing,
+  rendering,
+  localOnly,
   queued,
   uploading,
+  synced,
   uploaded,
   verifying,
   ready,
@@ -34,6 +38,9 @@ class UploadTask {
     required this.createdAt,
     this.completedAt,
   });
+
+  bool get isLocalOnly => status == UploadTaskStatus.localOnly;
+  bool get isSynced => status == UploadTaskStatus.synced || status == UploadTaskStatus.ready;
 
   UploadTask copyWith({
     UploadTaskStatus? status,

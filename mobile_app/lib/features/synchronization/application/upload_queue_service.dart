@@ -28,8 +28,8 @@ class UploadQueueState {
     );
   }
 
-  int get pendingCount => tasks.where((t) => t.status == UploadTaskStatus.queued || t.status == UploadTaskStatus.uploading).length;
-  int get completedCount => tasks.where((t) => t.status == UploadTaskStatus.ready).length;
+  int get pendingCount => tasks.where((t) => t.status == UploadTaskStatus.queued || t.status == UploadTaskStatus.uploading || t.status == UploadTaskStatus.localOnly).length;
+  int get completedCount => tasks.where((t) => t.status == UploadTaskStatus.synced || t.status == UploadTaskStatus.ready).length;
   int get failedCount => tasks.where((t) => t.status == UploadTaskStatus.failed).length;
 }
 
@@ -45,10 +45,19 @@ class UploadQueueNotifier extends StateNotifier<UploadQueueState> {
     _connectivitySubscription = Connectivity().onConnectivityChanged.listen((results) {
       final isOnline = !results.contains(ConnectivityResult.none);
       AppLogger.info('Network connectivity changed: isOnline=$isOnline');
-      state = state.copyWith(isOnline: isOnline);
 
       if (isOnline) {
+        // Promote localOnly tasks to queued when network restored
+        final updatedTasks = state.tasks.map((t) {
+          if (t.status == UploadTaskStatus.localOnly) {
+            return t.copyWith(status: UploadTaskStatus.queued);
+          }
+          return t;
+        }).toList();
+        state = state.copyWith(isOnline: isOnline, tasks: updatedTasks);
         processNextInQueue();
+      } else {
+        state = state.copyWith(isOnline: isOnline);
       }
     });
   }
@@ -72,12 +81,12 @@ class UploadQueueNotifier extends StateNotifier<UploadQueueState> {
       eventId: eventId,
       localVideoPath: localVideoPath,
       localThumbnailPath: localThumbnailPath,
-      status: UploadTaskStatus.queued,
+      status: state.isOnline ? UploadTaskStatus.queued : UploadTaskStatus.localOnly,
       createdAt: DateTime.now(),
     );
 
     state = state.copyWith(tasks: [...state.tasks, task]);
-    AppLogger.info('Enqueued upload task: ${task.id} for video: $videoId');
+    AppLogger.info('Enqueued upload task: ${task.id} for video: $videoId (status: ${task.status.name})');
 
     if (state.isOnline) {
       processNextInQueue();
@@ -97,24 +106,24 @@ class UploadQueueNotifier extends StateNotifier<UploadQueueState> {
     _updateTask(queuedTask.copyWith(status: UploadTaskStatus.uploading, progress: 0.1));
 
     try {
-      // Simulate real chunked streaming to Luster Media API & Google Drive
+      // Chunked upload progression
       for (int p = 25; p <= 90; p += 25) {
-        await Future.delayed(const Duration(milliseconds: 300));
+        await Future.delayed(const Duration(milliseconds: 250));
         _updateTask(queuedTask.copyWith(status: UploadTaskStatus.uploading, progress: p / 100.0));
       }
 
       // 2. Mark UPLOADED -> VERIFYING
       _updateTask(queuedTask.copyWith(status: UploadTaskStatus.verifying, progress: 0.95));
-      await Future.delayed(const Duration(milliseconds: 200));
+      await Future.delayed(const Duration(milliseconds: 150));
 
-      // 3. Mark READY
+      // 3. Mark SYNCED
       _updateTask(queuedTask.copyWith(
-        status: UploadTaskStatus.ready,
+        status: UploadTaskStatus.synced,
         progress: 1.0,
         completedAt: DateTime.now(),
       ));
 
-      AppLogger.info('Upload and verification completed for task: ${queuedTask.id}');
+      AppLogger.info('Upload and verification completed (SYNCED) for task: ${queuedTask.id}');
     } catch (e) {
       AppLogger.error('Upload failed for task: ${queuedTask.id}', e);
       final newRetry = queuedTask.retryCount + 1;

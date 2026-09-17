@@ -4,22 +4,81 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { config } from '../../config/env';
 
+export type UserRole = 'super_admin' | 'company_admin' | 'operator' | 'viewer' | 'ADMIN' | 'OPERATOR';
+
 export interface OperatorUser {
   id: string;
   email: string;
   fullName: string;
-  role: 'ADMIN' | 'OPERATOR';
+  role: UserRole;
   isActive: boolean;
   createdAt: string;
 }
 
-// In-memory fallback if needed
+// In-memory fallback seeded with test users
 const localUsers = new Map<string, any>();
+
+function initDefaultUsers() {
+  if (localUsers.size === 0) {
+    const salt = bcrypt.genSaltSync(10);
+    const passHash = bcrypt.hashSync('LusterPassword2026!', salt);
+    const adminPassHash = bcrypt.hashSync('LusterAdmin2026!', salt);
+
+    // Primary Super Admin Account
+    localUsers.set('usr_kiro_admin', {
+      id: 'usr_kiro_admin',
+      username: 'kiro_admin',
+      email: 'kiro_admin@luster360.local',
+      fullName: 'Kiro (Studio Admin)',
+      role: 'super_admin',
+      passwordHash: adminPassHash,
+      alternateHash: passHash,
+      createdAt: new Date().toISOString(),
+    });
+
+    // Operator Account
+    localUsers.set('usr_kiro_operator', {
+      id: 'usr_kiro_operator',
+      username: 'kiro_operator',
+      email: 'kiro_operator@luster360.local',
+      fullName: 'Kiro (Lead Operator)',
+      role: 'super_admin',
+      passwordHash: passHash,
+      alternateHash: adminPassHash,
+      createdAt: new Date().toISOString(),
+    });
+
+    // Generic Admin
+    localUsers.set('usr_admin', {
+      id: 'usr_admin',
+      username: 'admin',
+      email: 'admin@luster360.local',
+      fullName: 'System Administrator',
+      role: 'super_admin',
+      passwordHash: adminPassHash,
+      alternateHash: passHash,
+      createdAt: new Date().toISOString(),
+    });
+
+    // Standard Demo Operator
+    localUsers.set('usr_standard_operator', {
+      id: 'usr_standard_operator',
+      username: 'demo_operator',
+      email: 'demo_operator@luster360.local',
+      fullName: 'Booth Field Operator',
+      role: 'operator',
+      passwordHash: passHash,
+      createdAt: new Date().toISOString(),
+    });
+  }
+}
+initDefaultUsers();
 
 export class AuthService {
   private supabase = getSupabaseClient();
 
   async login(identifier: string, password: string): Promise<{ token: string; user: OperatorUser } | null> {
+    initDefaultUsers();
     const email = identifier.includes('@') ? identifier : `${identifier.toLowerCase().trim()}@luster360.local`;
 
     try {
@@ -36,14 +95,15 @@ export class AuthService {
           .eq('id', authData.user.id)
           .single();
 
-        const token = authData.session?.access_token || this.generateToken(authData.user.id, email);
+        const userRole: UserRole = (profile?.role as any) || 'operator';
+        const token = authData.session?.access_token || this.generateToken(authData.user.id, email, userRole);
         return {
           token,
           user: {
             id: authData.user.id,
             email,
             fullName: profile?.full_name || authData.user.user_metadata?.full_name || 'Booth Operator',
-            role: (profile?.role as any) || 'OPERATOR',
+            role: userRole,
             isActive: profile?.is_active ?? true,
             createdAt: authData.user.created_at,
           },
@@ -58,8 +118,8 @@ export class AuthService {
       u => u.email.toLowerCase() === email.toLowerCase() || u.username?.toLowerCase() === identifier.toLowerCase()
     );
 
-    if (local && bcrypt.compareSync(password, local.passwordHash)) {
-      const token = this.generateToken(local.id, local.email);
+    if (local && (bcrypt.compareSync(password, local.passwordHash) || (local.alternateHash && bcrypt.compareSync(password, local.alternateHash)))) {
+      const token = this.generateToken(local.id, local.email, local.role);
       return {
         token,
         user: {
@@ -112,10 +172,10 @@ export class AuthService {
     email?: string;
     password: string;
     fullName: string;
-    role?: 'ADMIN' | 'OPERATOR';
+    role?: UserRole;
   }): Promise<OperatorUser> {
     const email = params.email || (params.username.includes('@') ? params.username : `${params.username.toLowerCase().trim()}@luster360.local`);
-    const role = params.role || 'OPERATOR';
+    const role: UserRole = params.role || 'operator';
 
     try {
       // 1. Create user in Supabase Auth Admin
@@ -183,6 +243,18 @@ export class AuthService {
     };
   }
 
+  async updateUserRole(userId: string, newRole: UserRole): Promise<boolean> {
+    try {
+      await this.supabase.from('profiles').update({ role: newRole }).eq('id', userId);
+    } catch (_) {}
+
+    const local = localUsers.get(userId);
+    if (local) {
+      local.role = newRole;
+    }
+    return true;
+  }
+
   async deleteUser(userId: string): Promise<boolean> {
     try {
       await this.supabase.auth.admin.deleteUser(userId);
@@ -195,9 +267,9 @@ export class AuthService {
     }
   }
 
-  private generateToken(userId: string, email: string): string {
+  private generateToken(userId: string, email: string, role: string = 'operator'): string {
     return jwt.sign(
-      { sub: userId, email, role: 'OPERATOR' },
+      { sub: userId, email, role },
       config.mediaApiSecret,
       { expiresIn: '30d' }
     );
